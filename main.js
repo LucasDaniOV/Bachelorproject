@@ -4,6 +4,7 @@ import { TransformControls } from 'three/addons/controls/TransformControls.js';
 import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
 import { createCamera } from './src/components/camera';
 import { createScene } from './src/components/scene';
+import { PI } from 'three/webgpu';
 
 const scene = createScene();
 const camera = createCamera();
@@ -18,10 +19,15 @@ let solarPanelModel;
 let worldup = new THREE.Vector3();
 
 loader.load(
-  'assets/post-apo_solar.glb',
+  'assets/Solar battery.glb',
   function (gltf) {
     solarPanelModel = gltf.scene;
     scene.add(solarPanelModel);
+
+    solarPanelModel.position.set(0, 2, 0);
+    solarPanelModel.scale.set(0.01, 0.01, 0.01);
+
+    console.log(solarPanelModel);
 
     const transformControls = new TransformControls(
       camera,
@@ -59,17 +65,50 @@ loader.load(
   }
 );
 
+// // Step 2: Create the Cylinder (Bone)
+// const cylinderGeometry = new THREE.CylinderGeometry(1, 1, 5, 16); // radiusTop, radiusBottom, height, radialSegments
+// const cylinderMaterial = new THREE.MeshStandardMaterial({ color: 0xff0000 });
+// const cylinder = new THREE.Mesh(cylinderGeometry, cylinderMaterial);
+// cylinder.position.set(0, 2.5, 0);
+// scene.add(cylinder);
+
+// const textureLoader = new THREE.TextureLoader();
+// const texture = textureLoader.load('assets/SolarPanel003_1K-JPG_Color.jpg');
+// const rectangleGeometry = new THREE.PlaneGeometry(4, 4); // width, height
+// const rectangleMaterial = new THREE.MeshStandardMaterial({
+//   map: texture,
+//   side: THREE.DoubleSide,
+// });
+// const rectangle = new THREE.Mesh(rectangleGeometry, rectangleMaterial);
+
+// rectangle.position.y = 2.6; // Move rectangle to the top of the cylinder
+// rectangle.receiveShadow = true;
+// rectangle.rotateX(Math.PI / 2);
+// cylinder.add(rectangle); // Attach rectangle tocylinder
+
+// const transformControls = new TransformControls(camera, renderer.domElement);
+// transformControls.attach(rectangle);
+// transformControls.setMode('rotate');
+// scene.add(transformControls);
+
+// // Prevent OrbitControls from interfering with TransformControls
+// transformControls.addEventListener('dragging-changed', function (event) {
+//   orbitControls.enabled = !event.value;
+// });
+
 function animate() {
   // requestAnimationFrame(animate);
   renderer.render(scene, camera);
-  // solarPanelModel.getWorldDirection(worldup);
-  // console.log('World direction:', worldup);
 }
 
 function createFloor() {
-  const floorGeometry = new THREE.PlaneGeometry(50, 50); // Width and height of the plane
-  const floorMaterial = new THREE.MeshPhongMaterial({
-    color: 0x008000,
+  const floorGeometry = new THREE.PlaneGeometry(50, 50);
+
+  const textureLoader = new THREE.TextureLoader();
+  const texture = textureLoader.load('assets/Grass001_1K-JPG_Color.jpg');
+
+  const floorMaterial = new THREE.MeshStandardMaterial({
+    map: texture,
     side: THREE.DoubleSide,
   });
   const floor = new THREE.Mesh(floorGeometry, floorMaterial);
@@ -83,19 +122,33 @@ function createFloor() {
   scene.add(floor);
 }
 
-function createSun() {
-  const geometry = new THREE.SphereGeometry(5, 32, 16);
-  const material = new THREE.MeshBasicMaterial({ color: 0xffff00 });
-  const sphere = new THREE.Mesh(geometry, material);
-  sphere.position.set(-30, 20, 0);
+const sunLight = new THREE.DirectionalLight(0xffffff, 1); // white light
+sunLight.position.set(0, 30, 0); // initial position above the panels
+scene.add(sunLight);
 
-  // Create a PointLight that follows the sun
-  const pointLight = new THREE.PointLight(0xffffff, 10000, 100); // Increased intensity
-  pointLight.position.copy(sphere.position); // Set the position of the light to the sun sphere position
-  pointLight.castShadow = true; // Enable shadows
+const sunGeometry = new THREE.SphereGeometry(5, 32, 32);
+const sunMaterial = new THREE.MeshBasicMaterial({ color: 0xffdd44 }); // bright sun color
+const sunMesh = new THREE.Mesh(sunGeometry, sunMaterial);
+scene.add(sunMesh);
 
-  scene.add(pointLight);
-  scene.add(sphere);
+function updateSunPosition(timeOfDay) {
+  const radius = 30; // distance of the sun from the center
+  const angle = Math.PI * timeOfDay; // calculate angle based on time of day (0 - 2)
+
+  // Update sun position in the sky (circular arc)
+  const sunX = radius * Math.cos(angle); // x-axis (left to right movement)
+  const sunY = radius * Math.sin(angle); // y-axis (up and down movement)
+
+  // Set the position of the sun (light and visual)
+  sunLight.position.set(sunX, sunY, 0);
+  sunMesh.position.set(sunX, sunY, 0);
+
+  // Update sunlight intensity based on the sun's height (sunY)
+  // High in the sky (noon) = high intensity, low in the sky (morning/evening) = low intensity
+  const intensity = Math.max(0.1, sunY / radius); // max intensity at noon, 0.1 at lowest
+  sunLight.intensity = intensity;
+
+  console.log(sunLight.intensity);
 }
 
 function createSolarPanel() {
@@ -121,12 +174,18 @@ function createSolarPanel() {
   cube.position.set(0, 5, 10);
 }
 
+const timeSlider = document.getElementById('timeSlider');
+
+timeSlider.addEventListener('input', () => {
+  let timeOfDay = parseFloat(timeSlider.value);
+  updateSunPosition(timeOfDay); // Update the sun's position based on slider value
+});
+
 function init() {
   renderer.setSize(window.innerWidth, window.innerHeight);
 
   createFloor();
-  createSun();
-  createSolarPanel();
+  updateSunPosition(0);
 
   renderer.setAnimationLoop(animate);
   document.body.appendChild(renderer.domElement);
