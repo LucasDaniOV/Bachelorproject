@@ -7,6 +7,7 @@ import {
 } from 'three';
 
 const radius = 300;
+const multiplier = 2;
 
 function createSunLight() {
   const sunLight = new DirectionalLight(0xffffff, 1);
@@ -32,7 +33,7 @@ function updateSunPosition(sunLight, sunMesh, timeOfDay) {
   sunLight.position.set(sunX, sunY, 100);
   sunMesh.position.set(sunX, sunY, 100);
 
-  const intensity = Math.max(0.1, sunY / radius); // max intensity at noon, 0.1 at lowest
+  const intensity = Math.max(0.1, (sunY / radius) * multiplier); // max intensity at noon, 0.1 at lowest
   sunLight.intensity = intensity;
 }
 

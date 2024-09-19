@@ -24,6 +24,9 @@ controls.maxTargetRadius = 500;
 
 const gltfLoader = new GLTFLoader();
 const fontLoader = new FontLoader();
+const textureLoader = new THREE.TextureLoader();
+
+const gui = new GUI();
 
 function animate() {
   controls.update();
@@ -135,6 +138,82 @@ function loadHouse() {
   );
 }
 
+function addRoofSolarPanel() {
+  const colorTexture = textureLoader.load(
+    'assets/textures/solar_panel_poly/SolarPanel001_1K-JPG_Color.jpg'
+  );
+  const normalTexture = textureLoader.load(
+    'assets/textures/solar_panel_poly/SolarPanel001_1K-JPG_NormalDX.jpg'
+  ); // or NormalGL
+  const roughnessTexture = textureLoader.load(
+    'assets/textures/solar_panel_poly/SolarPanel001_1K-JPG_Roughness.jpg'
+  );
+  const metalnessTexture = textureLoader.load(
+    'assets/textures/solar_panel_poly/SolarPanel001_1K-JPG_Metalness.jpg'
+  );
+
+  const panelMaterial = new THREE.MeshStandardMaterial({
+    map: colorTexture,
+    normalMap: normalTexture,
+    roughnessMap: roughnessTexture,
+    metalnessMap: metalnessTexture,
+    roughness: 0.5,
+    metalness: 0.5,
+  });
+
+  const cubeGeometry = new THREE.BoxGeometry(50, 75, 5);
+
+  const cubeMaterials = [
+    new THREE.MeshStandardMaterial({ color: 0x808080 }), // Right face (positive x)
+    new THREE.MeshStandardMaterial({ color: 0x808080 }), // Left face (negative x)
+    new THREE.MeshStandardMaterial({ color: 0x808080 }), // Top face (positive y)
+    new THREE.MeshStandardMaterial({ color: 0x808080 }), // Bottom face (negative y)
+    panelMaterial,
+    new THREE.MeshStandardMaterial({ color: 0x808080 }), // Back face (negative z)
+  ];
+  const cube = new THREE.Mesh(cubeGeometry, cubeMaterials);
+  cube.castShadow = true;
+  cube.receiveShadow = true;
+
+  const cylinderGeometry = new THREE.CylinderGeometry(2, 2, 30, 32);
+  const cylinderMaterial = new THREE.MeshStandardMaterial({
+    color: 0x808080,
+  });
+  const cylinder = new THREE.Mesh(cylinderGeometry, cylinderMaterial);
+
+  cylinder.position.set(40, 100, -45);
+  cylinder.add(cube);
+  cube.position.set(0, 17, 0);
+  cube.rotateX(-Math.PI / 2);
+
+  cylinder.castShadow = true;
+  cylinder.receiveShadow = true;
+
+  scene.add(cylinder);
+
+  let params = {
+    tilt: 0,
+    azimuth: 0,
+  };
+
+  const panelFolder = gui.addFolder('Solar Panel');
+  panelFolder
+    .add(params, 'tilt', 0, 90)
+    .name('Tilt Angle')
+    .onChange((value) => {
+      params.tilt = value;
+      cube.rotation.x = -Math.PI / 2 - THREE.MathUtils.degToRad(value);
+    });
+
+  panelFolder
+    .add(params, 'azimuth', 0, 360)
+    .name('Azimuth Angle')
+    .onChange((value) => {
+      params.azimuth = value;
+      cylinder.rotation.y = -THREE.MathUtils.degToRad(value);
+    });
+}
+
 function init() {
   renderer.setSize(window.innerWidth, window.innerHeight);
 
@@ -142,12 +221,6 @@ function init() {
   const sunMesh = createSunMesh();
   scene.add(sunLight);
   scene.add(sunMesh);
-
-  loadGrassland();
-  loadNavigation();
-  loadHouse();
-
-  const gui = new GUI();
 
   const sunFolder = gui.addFolder('Sun');
   const sunSettings = { timeOfDay: 0 };
@@ -157,6 +230,11 @@ function init() {
     .onChange((value) => {
       updateSunPosition(sunLight, sunMesh, parseFloat(value));
     });
+
+  loadGrassland();
+  loadNavigation();
+  loadHouse();
+  addRoofSolarPanel();
 
   updateSunPosition(sunLight, sunMesh, 0.5);
 
