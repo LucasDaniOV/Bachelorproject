@@ -219,17 +219,18 @@ function createSun() {
   const sunMesh = createSunMesh();
   scene.add(sunLight);
   scene.add(sunMesh);
+  updateSunPosition(sunLight, sunMesh, 0);
 
-  const sunFolder = gui.addFolder('Sun');
-  const sunSettings = { timeOfDay: 0 };
+  const sunFolder = gui.addFolder('Time');
+  const params = {
+    hour: 0,
+  };
   sunFolder
-    .add(sunSettings, 'timeOfDay', 0, 1)
-    .name('Time of Day')
+    .add(params, 'hour', 0, 24)
+    .name('Hour')
     .onChange((value) => {
-      updateSunPosition(sunLight, sunMesh, parseFloat(value));
+      updateSunPosition(sunLight, sunMesh, value);
     });
-
-  updateSunPosition(sunLight, sunMesh, 0.5);
 }
 
 function init() {

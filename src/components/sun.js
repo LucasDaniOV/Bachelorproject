@@ -3,7 +3,6 @@ import {
   Mesh,
   MeshBasicMaterial,
   SphereGeometry,
-  Vector3,
 } from 'three';
 
 const radius = 300;
@@ -11,7 +10,6 @@ const multiplier = 8;
 
 function createSunLight() {
   const sunLight = new DirectionalLight(0xffffff, 1);
-  sunLight.position.set(radius, 0, 0);
   return sunLight;
 }
 
@@ -19,21 +17,19 @@ function createSunMesh() {
   const sunGeometry = new SphereGeometry(10, 32, 32);
   const sunMaterial = new MeshBasicMaterial({ color: 0xffdd44 });
   const sunMesh = new Mesh(sunGeometry, sunMaterial);
-  sunMesh.position.set(radius, 0, 0);
   return sunMesh;
 }
 
-function updateSunPosition(sunLight, sunMesh, timeOfDay) {
-  const angle = Math.PI * timeOfDay; // calculate angle based on time of day (0 - 2)
+function updateSunPosition(sunLight, sunMesh, hour) {
+  const angle = (hour / 24) * Math.PI * 2 - Math.PI / 2;
 
-  // Update sun position in the sky (circular arc)
-  const sunX = radius * Math.cos(angle); // x-axis (left to right movement)
-  const sunY = radius * Math.sin(angle); // y-axis (up and down movement)
+  const sunX = radius * Math.cos(angle);
+  const sunY = radius * Math.sin(angle);
 
-  sunLight.position.set(sunX, sunY, 100);
-  sunMesh.position.set(sunX, sunY, 100);
+  sunLight.position.set(sunX, sunY, radius);
+  sunMesh.position.set(sunX, sunY, radius);
 
-  const intensity = Math.max(0.1, (sunY / radius) * multiplier); // max intensity at noon, 0.1 at lowest
+  const intensity = Math.max(0.1, (sunY / radius) * multiplier);
   sunLight.intensity = intensity;
 }
 
