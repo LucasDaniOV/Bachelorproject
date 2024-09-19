@@ -214,9 +214,7 @@ function addRoofSolarPanel() {
     });
 }
 
-function init() {
-  renderer.setSize(window.innerWidth, window.innerHeight);
-
+function createSun() {
   const sunLight = createSunLight();
   const sunMesh = createSunMesh();
   scene.add(sunLight);
@@ -231,12 +229,17 @@ function init() {
       updateSunPosition(sunLight, sunMesh, parseFloat(value));
     });
 
+  updateSunPosition(sunLight, sunMesh, 0.5);
+}
+
+function init() {
+  renderer.setSize(window.innerWidth, window.innerHeight);
+
+  createSun();
   loadGrassland();
   loadNavigation();
   loadHouse();
   addRoofSolarPanel();
-
-  updateSunPosition(sunLight, sunMesh, 0.5);
 
   renderer.setAnimationLoop(animate);
   document.body.appendChild(renderer.domElement);

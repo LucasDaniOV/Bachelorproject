@@ -7,7 +7,7 @@ import {
 } from 'three';
 
 const radius = 300;
-const multiplier = 2;
+const multiplier = 8;
 
 function createSunLight() {
   const sunLight = new DirectionalLight(0xffffff, 1);
