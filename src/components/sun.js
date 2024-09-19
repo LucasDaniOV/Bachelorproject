@@ -29,8 +29,8 @@ function updateSunPosition(sunLight, sunMesh, timeOfDay) {
   const sunX = radius * Math.cos(angle); // x-axis (left to right movement)
   const sunY = radius * Math.sin(angle); // y-axis (up and down movement)
 
-  sunLight.position.set(sunX, sunY, 0);
-  sunMesh.position.set(sunX, sunY, 0);
+  sunLight.position.set(sunX, sunY, 100);
+  sunMesh.position.set(sunX, sunY, 100);
 
   const intensity = Math.max(0.1, sunY / radius); // max intensity at noon, 0.1 at lowest
   sunLight.intensity = intensity;

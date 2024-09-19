@@ -118,6 +118,23 @@ function loadNavigation() {
   });
 }
 
+function loadHouse() {
+  gltfLoader.load(
+    'assets/models/modern_house_low_poly.glb',
+    function (gltf) {
+      let model = gltf.scene;
+      model.scale.set(15, 15, 15);
+      model.rotateY(-Math.PI / 2);
+      model.position.y += 1;
+      scene.add(model);
+    },
+    undefined,
+    function (error) {
+      console.error(error);
+    }
+  );
+}
+
 function init() {
   renderer.setSize(window.innerWidth, window.innerHeight);
 
@@ -128,6 +145,7 @@ function init() {
 
   loadGrassland();
   loadNavigation();
+  loadHouse();
 
   const gui = new GUI();
 
