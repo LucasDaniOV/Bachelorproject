@@ -31,7 +31,42 @@ const gui = new GUI();
 let info = {
   latitude: 50,
   longitude: 5,
+  date: new Date(),
+  year: new Date().getFullYear(),
+  month: new Date().getMonth() + 1,
+  day: new Date().getDate(),
+  hour: new Date().getHours(),
+  minutes: new Date().getMinutes(),
 };
+
+let dateStuff = {
+  year: {
+    setter: 'setFullYear',
+  },
+  month: {
+    setter: 'setMonth',
+    min: 1,
+    max: 12,
+  },
+  day: {
+    setter: 'setDate',
+    min: 1,
+    max: new Date(info.date.getFullYear(), info.date.getMonth(), 0).getDate(),
+  },
+  hour: {
+    setter: 'setHours',
+    min: 1,
+    max: 24,
+  },
+  minutes: {
+    setter: 'setMinutes',
+    min: 0,
+    max: 60,
+  },
+};
+
+let sunLight;
+let sunMesh;
 
 function animate() {
   controls.update();
@@ -220,28 +255,78 @@ function addRoofSolarPanel() {
 }
 
 function createSun() {
-  const sunLight = createSunLight();
-  const sunMesh = createSunMesh();
+  sunLight = createSunLight();
+  sunMesh = createSunMesh();
+
   scene.add(sunLight);
   scene.add(sunMesh);
-  updateSunPosition(sunLight, sunMesh, info.latitude, info.longitude, 0);
 
-  const sunFolder = gui.addFolder('Time');
-  const params = {
-    hour: 0,
-  };
-  sunFolder
-    .add(params, 'hour', 0, 24)
-    .name('Hour')
-    .onChange((value) => {
-      updateSunPosition(
-        sunLight,
-        sunMesh,
-        info.latitude,
-        info.longitude,
-        value
-      );
-    });
+  updateSunPosition(
+    sunLight,
+    sunMesh,
+    info.latitude,
+    info.longitude,
+    info.date
+  );
+
+  const timeFolder = gui.addFolder('Time');
+
+  let dayController;
+
+  Object.keys(dateStuff).forEach((key) => {
+    const { setter, min, max } = dateStuff[key];
+    if (key == 'day') {
+      dayController = timeFolder
+        .add(info, key, min, max, 1)
+        .name(key.charAt(0).toUpperCase() + key.slice(1))
+        .onChange((value) => {
+          info.date[setter](value);
+          updateSunPosition(
+            sunLight,
+            sunMesh,
+            info.latitude,
+            info.longitude,
+            info.date
+          );
+        });
+    } else if (key == 'year') {
+      timeFolder
+        .add(info, key)
+        .name(key.charAt(0).toUpperCase() + key.slice(1))
+        .onChange((value) => {
+          info.date[setter](value);
+          updateSunPosition(
+            sunLight,
+            sunMesh,
+            info.latitude,
+            info.longitude,
+            info.date
+          );
+        });
+    } else {
+      timeFolder
+        .add(info, key, min, max, 1)
+        .name(key.charAt(0).toUpperCase() + key.slice(1))
+        .onChange((value) => {
+          info.date[setter](value);
+          if (key == 'month') {
+            dateStuff[key].max = new Date(
+              info.date.getFullYear(),
+              info.date.getMonth(),
+              0
+            ).getDate();
+            dayController.max(dateStuff[key].max).setValue(1);
+          }
+          updateSunPosition(
+            sunLight,
+            sunMesh,
+            info.latitude,
+            info.longitude,
+            info.date
+          );
+        });
+    }
+  });
 }
 
 function getLocation() {
@@ -250,6 +335,13 @@ function getLocation() {
       info.latitude = position.coords.latitude;
       info.longitude = position.coords.longitude;
       gui.updateDisplay();
+      updateSunPosition(
+        sunLight,
+        sunMesh,
+        info.latitude,
+        info.longitude,
+        info.date
+      );
     });
   }
 }
@@ -264,12 +356,26 @@ function updateLocationGUI() {
     .name('Latitude')
     .onChange((value) => {
       info.latitude = value;
+      updateSunPosition(
+        sunLight,
+        sunMesh,
+        info.latitude,
+        info.longitude,
+        info.date
+      );
     });
   locationFolder
     .add(info, 'longitude', -180, 180)
     .name('Longitude')
     .onChange((value) => {
       info.longitude = value;
+      updateSunPosition(
+        sunLight,
+        sunMesh,
+        info.latitude,
+        info.longitude,
+        info.date
+      );
     });
 }
 
