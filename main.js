@@ -224,7 +224,7 @@ function createSun() {
   const sunMesh = createSunMesh();
   scene.add(sunLight);
   scene.add(sunMesh);
-  updateSunPosition(sunLight, sunMesh, 0);
+  updateSunPosition(sunLight, sunMesh, info.latitude, info.longitude, 0);
 
   const sunFolder = gui.addFolder('Time');
   const params = {
@@ -234,7 +234,13 @@ function createSun() {
     .add(params, 'hour', 0, 24)
     .name('Hour')
     .onChange((value) => {
-      updateSunPosition(sunLight, sunMesh, value);
+      updateSunPosition(
+        sunLight,
+        sunMesh,
+        info.latitude,
+        info.longitude,
+        value
+      );
     });
 }
 
@@ -243,21 +249,25 @@ function getLocation() {
     navigator.geolocation.getCurrentPosition((position) => {
       info.latitude = position.coords.latitude;
       info.longitude = position.coords.longitude;
+      gui.updateDisplay();
     });
   }
+}
 
+function updateLocationGUI() {
   const locationFolder = gui.addFolder('Location');
   locationFolder
-    .add(info, 'latitude')
+    .add({ reset: getLocation }, 'reset')
+    .name('Reset to current location');
+  locationFolder
+    .add(info, 'latitude', -90, 90)
     .name('Latitude')
-    .listen()
     .onChange((value) => {
       info.latitude = value;
     });
   locationFolder
-    .add(info, 'longitude')
+    .add(info, 'longitude', -180, 180)
     .name('Longitude')
-    .listen()
     .onChange((value) => {
       info.longitude = value;
     });
@@ -267,6 +277,7 @@ function init() {
   renderer.setSize(window.innerWidth, window.innerHeight);
 
   getLocation();
+  updateLocationGUI();
   createSun();
   loadGrassland();
   loadNavigation();
