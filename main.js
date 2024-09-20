@@ -28,6 +28,11 @@ const textureLoader = new THREE.TextureLoader();
 
 const gui = new GUI();
 
+let info = {
+  latitude: 50,
+  longitude: 5,
+};
+
 function animate() {
   controls.update();
   renderer.render(scene, camera);
@@ -233,9 +238,35 @@ function createSun() {
     });
 }
 
+function getLocation() {
+  if (navigator.geolocation) {
+    navigator.geolocation.getCurrentPosition((position) => {
+      info.latitude = position.coords.latitude;
+      info.longitude = position.coords.longitude;
+    });
+  }
+
+  const locationFolder = gui.addFolder('Location');
+  locationFolder
+    .add(info, 'latitude')
+    .name('Latitude')
+    .listen()
+    .onChange((value) => {
+      info.latitude = value;
+    });
+  locationFolder
+    .add(info, 'longitude')
+    .name('Longitude')
+    .listen()
+    .onChange((value) => {
+      info.longitude = value;
+    });
+}
+
 function init() {
   renderer.setSize(window.innerWidth, window.innerHeight);
 
+  getLocation();
   createSun();
   loadGrassland();
   loadNavigation();
