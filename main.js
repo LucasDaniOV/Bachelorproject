@@ -28,15 +28,13 @@ const textureLoader = new THREE.TextureLoader();
 
 const gui = new GUI();
 
+let sunLight;
+let sunMesh;
+let dayController;
+
 let info = {
   latitude: 50,
   longitude: 5,
-  date: new Date(),
-  year: new Date().getFullYear(),
-  month: new Date().getMonth() + 1,
-  day: new Date().getDate(),
-  hour: new Date().getHours(),
-  minutes: new Date().getMinutes(),
 };
 
 let dateStuff = {
@@ -51,7 +49,6 @@ let dateStuff = {
   day: {
     setter: 'setDate',
     min: 1,
-    max: new Date(info.date.getFullYear(), info.date.getMonth(), 0).getDate(),
   },
   hour: {
     setter: 'setHours',
@@ -64,9 +61,6 @@ let dateStuff = {
     max: 60,
   },
 };
-
-let sunLight;
-let sunMesh;
 
 function animate() {
   controls.update();
@@ -257,10 +251,77 @@ function addRoofSolarPanel() {
 function createSun() {
   sunLight = createSunLight();
   sunMesh = createSunMesh();
-
   scene.add(sunLight);
   scene.add(sunMesh);
+}
 
+function getLocation() {
+  if (navigator.geolocation) {
+    navigator.geolocation.getCurrentPosition((position) => {
+      info.latitude = position.coords.latitude;
+      info.longitude = position.coords.longitude;
+      gui.updateDisplay();
+      updateSunPosition(
+        sunLight,
+        sunMesh,
+        info.latitude,
+        info.longitude,
+        info.date
+      );
+    });
+  }
+}
+
+function updateLocationGUI() {
+  const locationFolder = gui.addFolder('Location');
+  locationFolder
+    .add({ reset: getLocation }, 'reset')
+    .name('Reset to current location');
+  locationFolder
+    .add(info, 'latitude', -90, 90)
+    .name('Latitude')
+    .onChange((value) => {
+      info.latitude = value;
+      updateSunPosition(
+        sunLight,
+        sunMesh,
+        info.latitude,
+        info.longitude,
+        info.date
+      );
+    });
+  locationFolder
+    .add(info, 'longitude', -180, 180)
+    .name('Longitude')
+    .onChange((value) => {
+      info.longitude = value;
+      updateSunPosition(
+        sunLight,
+        sunMesh,
+        info.latitude,
+        info.longitude,
+        info.date
+      );
+    });
+}
+
+function setDate() {
+  const date = new Date();
+  info.date = date;
+  info.year = date.getFullYear();
+  info.month = date.getMonth() + 1;
+  info.day = date.getDate();
+  info.hour = date.getHours();
+  info.minutes = date.getMinutes();
+  dateStuff.day.max = new Date(
+    date.getFullYear(),
+    date.getMonth(),
+    0
+  ).getDate();
+  if (dayController) {
+    dayController.max(dateStuff.day.max).setValue(1);
+  }
+  gui.updateDisplay();
   updateSunPosition(
     sunLight,
     sunMesh,
@@ -268,10 +329,11 @@ function createSun() {
     info.longitude,
     info.date
   );
+}
 
+function createTimeControls() {
   const timeFolder = gui.addFolder('Time');
-
-  let dayController;
+  timeFolder.add({ reset: setDate }, 'reset').name('Reset to current date');
 
   Object.keys(dateStuff).forEach((key) => {
     const { setter, min, max } = dateStuff[key];
@@ -329,66 +391,18 @@ function createSun() {
   });
 }
 
-function getLocation() {
-  if (navigator.geolocation) {
-    navigator.geolocation.getCurrentPosition((position) => {
-      info.latitude = position.coords.latitude;
-      info.longitude = position.coords.longitude;
-      gui.updateDisplay();
-      updateSunPosition(
-        sunLight,
-        sunMesh,
-        info.latitude,
-        info.longitude,
-        info.date
-      );
-    });
-  }
-}
-
-function updateLocationGUI() {
-  const locationFolder = gui.addFolder('Location');
-  locationFolder
-    .add({ reset: getLocation }, 'reset')
-    .name('Reset to current location');
-  locationFolder
-    .add(info, 'latitude', -90, 90)
-    .name('Latitude')
-    .onChange((value) => {
-      info.latitude = value;
-      updateSunPosition(
-        sunLight,
-        sunMesh,
-        info.latitude,
-        info.longitude,
-        info.date
-      );
-    });
-  locationFolder
-    .add(info, 'longitude', -180, 180)
-    .name('Longitude')
-    .onChange((value) => {
-      info.longitude = value;
-      updateSunPosition(
-        sunLight,
-        sunMesh,
-        info.latitude,
-        info.longitude,
-        info.date
-      );
-    });
-}
-
 function init() {
   renderer.setSize(window.innerWidth, window.innerHeight);
 
-  getLocation();
-  updateLocationGUI();
   createSun();
+  setDate();
   loadGrassland();
   loadNavigation();
   loadHouse();
   addRoofSolarPanel();
+  getLocation();
+  updateLocationGUI();
+  createTimeControls();
 
   renderer.setAnimationLoop(animate);
   document.body.appendChild(renderer.domElement);
