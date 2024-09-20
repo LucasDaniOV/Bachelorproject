@@ -319,7 +319,7 @@ function setDate() {
     0
   ).getDate();
   if (dayController) {
-    dayController.max(dateStuff.day.max).setValue(1);
+    dayController.max(dateStuff.day.max).setValue(info.day);
   }
   gui.updateDisplay();
   updateSunPosition(
