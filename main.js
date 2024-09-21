@@ -17,7 +17,7 @@ const camera = createCamera();
 const renderer = new THREE.WebGLRenderer();
 
 const controls = new MapControls(camera, renderer.domElement);
-controls.enableRotate = false;
+// controls.enableRotate = false;
 controls.maxDistance = 500;
 controls.minDistance = 50;
 controls.maxTargetRadius = 500;
@@ -27,14 +27,28 @@ const fontLoader = new FontLoader();
 const textureLoader = new THREE.TextureLoader();
 
 const gui = new GUI();
+const panelFolder = gui.addFolder('Solar Panel');
+panelFolder.open();
+const locationFolder = gui.addFolder('Location');
+const timeFolder = gui.addFolder('Time');
+const settingsFolder = gui.addFolder('Settings');
 
 let sunLight;
 let sunMesh;
 let dayController;
+let panelCube;
+let panelCylinder;
+let sunLightDirectionHelper;
+let solarPanelDirectionHelper;
 
 let info = {
   latitude: 50,
   longitude: 5,
+  tilt: 0,
+  azimuth: 0,
+  showArrowHelpers: true,
+  incidentAngle: 0,
+  efficiencyPercentage: 0,
 };
 
 let dateStuff = {
@@ -205,46 +219,42 @@ function addRoofSolarPanel() {
     panelMaterial,
     new THREE.MeshStandardMaterial({ color: 0x808080 }), // Back face (negative z)
   ];
-  const cube = new THREE.Mesh(cubeGeometry, cubeMaterials);
-  cube.castShadow = true;
-  cube.receiveShadow = true;
+  panelCube = new THREE.Mesh(cubeGeometry, cubeMaterials);
+  panelCube.castShadow = true;
+  panelCube.receiveShadow = true;
 
   const cylinderGeometry = new THREE.CylinderGeometry(2, 2, 30, 32);
   const cylinderMaterial = new THREE.MeshStandardMaterial({
     color: 0x808080,
   });
-  const cylinder = new THREE.Mesh(cylinderGeometry, cylinderMaterial);
+  panelCylinder = new THREE.Mesh(cylinderGeometry, cylinderMaterial);
 
-  cylinder.position.set(40, 100, -45);
-  cylinder.add(cube);
-  cube.position.set(0, 17, 0);
-  cube.rotateX(-Math.PI / 2);
+  panelCylinder.position.set(40, 100, -45);
+  panelCylinder.add(panelCube);
+  panelCube.position.set(0, 17, 0);
+  panelCube.rotateX(-Math.PI / 2);
 
-  cylinder.castShadow = true;
-  cylinder.receiveShadow = true;
+  panelCylinder.castShadow = true;
+  panelCylinder.receiveShadow = true;
 
-  scene.add(cylinder);
+  scene.add(panelCylinder);
 
-  let params = {
-    tilt: 0,
-    azimuth: 0,
-  };
-
-  const panelFolder = gui.addFolder('Solar Panel');
   panelFolder
-    .add(params, 'tilt', 0, 90)
+    .add(info, 'tilt', 0, 90)
     .name('Tilt Angle')
     .onChange((value) => {
-      params.tilt = value;
-      cube.rotation.x = -Math.PI / 2 - THREE.MathUtils.degToRad(value);
+      info.tilt = value;
+      panelCube.rotation.x = -Math.PI / 2 - THREE.MathUtils.degToRad(value);
+      calculateSolarPanelEnergyGeneration();
     });
 
   panelFolder
-    .add(params, 'azimuth', 0, 360)
+    .add(info, 'azimuth', 0, 360)
     .name('Azimuth Angle')
     .onChange((value) => {
-      params.azimuth = value;
-      cylinder.rotation.y = -THREE.MathUtils.degToRad(value);
+      info.azimuth = value;
+      panelCylinder.rotation.y = -THREE.MathUtils.degToRad(value);
+      calculateSolarPanelEnergyGeneration();
     });
 }
 
@@ -266,14 +276,15 @@ function getLocation() {
         sunMesh,
         info.latitude,
         info.longitude,
-        info.date
+        info.date,
+        info.tilt,
+        info.azimuth
       );
     });
   }
 }
 
 function updateLocationGUI() {
-  const locationFolder = gui.addFolder('Location');
   locationFolder
     .add({ reset: getLocation }, 'reset')
     .name('Reset to current location');
@@ -287,8 +298,11 @@ function updateLocationGUI() {
         sunMesh,
         info.latitude,
         info.longitude,
-        info.date
+        info.date,
+        info.tilt,
+        info.azimuth
       );
+      calculateSolarPanelEnergyGeneration();
     });
   locationFolder
     .add(info, 'longitude', -180, 180)
@@ -300,8 +314,11 @@ function updateLocationGUI() {
         sunMesh,
         info.latitude,
         info.longitude,
-        info.date
+        info.date,
+        info.tilt,
+        info.azimuth
       );
+      calculateSolarPanelEnergyGeneration();
     });
 }
 
@@ -332,7 +349,6 @@ function setDate() {
 }
 
 function createTimeControls() {
-  const timeFolder = gui.addFolder('Time');
   timeFolder.add({ reset: setDate }, 'reset').name('Reset to current date');
 
   Object.keys(dateStuff).forEach((key) => {
@@ -350,6 +366,7 @@ function createTimeControls() {
             info.longitude,
             info.date
           );
+          calculateSolarPanelEnergyGeneration();
         });
     } else if (key == 'year') {
       timeFolder
@@ -364,6 +381,7 @@ function createTimeControls() {
             info.longitude,
             info.date
           );
+          calculateSolarPanelEnergyGeneration();
         });
     } else {
       timeFolder
@@ -386,9 +404,91 @@ function createTimeControls() {
             info.longitude,
             info.date
           );
+          calculateSolarPanelEnergyGeneration();
         });
     }
   });
+}
+
+function calculateSolarPanelEnergyGeneration() {
+  const tiltRad = THREE.MathUtils.degToRad(info.tilt) + Math.PI;
+  const azimuthRad = THREE.MathUtils.degToRad(info.azimuth) - Math.PI / 2;
+
+  const panelNormal = new THREE.Vector3(
+    Math.sin(tiltRad) * Math.cos(azimuthRad),
+    Math.cos(tiltRad),
+    Math.sin(tiltRad) * Math.sin(azimuthRad)
+  ).normalize();
+
+  const sunDirection = sunLight.position.clone().negate().normalize();
+
+  // console.log('panel direction', panelNormal);
+  // console.log('sun direction', sunDirection);
+
+  if (!sunLightDirectionHelper) {
+    sunLightDirectionHelper = new THREE.ArrowHelper(
+      sunDirection,
+      sunLight.position,
+      500,
+      0xff0000
+    );
+    scene.add(sunLightDirectionHelper);
+  } else {
+    sunLightDirectionHelper.position.copy(sunLight.position);
+    sunLightDirectionHelper.setDirection(sunDirection);
+  }
+
+  if (!solarPanelDirectionHelper) {
+    solarPanelDirectionHelper = new THREE.ArrowHelper(
+      panelNormal,
+      panelCylinder.position,
+      500,
+      0x00ff00
+    );
+    scene.add(solarPanelDirectionHelper);
+  } else {
+    solarPanelDirectionHelper.position.copy(panelCylinder.position);
+    solarPanelDirectionHelper.setDirection(panelNormal);
+  }
+
+  const angle = panelNormal.angleTo(sunDirection);
+  const angleDeg = THREE.MathUtils.radToDeg(angle);
+  info.incidentAngle = angleDeg;
+
+  const efficiency = Math.cos(angle);
+  info.efficiencyPercentage = Math.max(0, efficiency) * 100;
+}
+
+function toggleArrowHelpers() {
+  settingsFolder
+    .add(info, 'showArrowHelpers')
+    .name('Vector directions')
+    .onChange((value) => {
+      info.showArrowHelpers = value;
+      if (sunLightDirectionHelper) {
+        sunLightDirectionHelper.visible = value;
+      }
+      if (solarPanelDirectionHelper) {
+        solarPanelDirectionHelper.visible = value;
+      }
+    });
+}
+
+function displayPanelStats() {
+  panelFolder.add(info, 'incidentAngle').name('Incident Angle').listen();
+  panelFolder.add(info, 'efficiencyPercentage').name('Efficiency').listen();
+
+  const labels = panelFolder.domElement.getElementsByTagName('span');
+  for (let label of labels) {
+    if (
+      label.innerHTML === 'Incident Angle' ||
+      label.innerHTML === 'Efficiency'
+    ) {
+      label.style.color = 'green';
+      label.style.fontSize = '15px';
+      label.style.fontWeight = 'bold';
+    }
+  }
 }
 
 function init() {
@@ -403,6 +503,10 @@ function init() {
   getLocation();
   updateLocationGUI();
   createTimeControls();
+
+  calculateSolarPanelEnergyGeneration();
+  toggleArrowHelpers();
+  displayPanelStats();
 
   renderer.setAnimationLoop(animate);
   document.body.appendChild(renderer.domElement);
