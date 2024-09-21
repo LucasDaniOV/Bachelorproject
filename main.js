@@ -491,6 +491,14 @@ function displayPanelStats() {
   }
 }
 
+function onWindowResize() {
+  const width = window.innerWidth;
+  const height = window.innerHeight;
+  renderer.setSize(width, height);
+  camera.aspect = width / height;
+  camera.updateProjectionMatrix();
+}
+
 function init() {
   renderer.setSize(window.innerWidth, window.innerHeight);
 
@@ -510,6 +518,8 @@ function init() {
 
   renderer.setAnimationLoop(animate);
   document.body.appendChild(renderer.domElement);
+
+  window.addEventListener('resize', onWindowResize, false);
 }
 
 init();
