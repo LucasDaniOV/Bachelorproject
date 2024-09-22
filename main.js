@@ -280,6 +280,7 @@ function getLocation() {
         info.tilt,
         info.azimuth
       );
+      calculateSolarPanelEnergyGeneration();
     });
   }
 }
