@@ -325,10 +325,10 @@ function createTimeControls() {
     });
 
   timeFolder
-    .add(info, 'month', 0, 11, 1)
+    .add(info, 'guiMonth', 1, 12, 1)
     .name('Month')
     .onChange((value) => {
-      info.date.setMonth(value);
+      info.date.setMonth(value - 1); // months range: 0-11
       updateTime();
     });
 
@@ -469,6 +469,7 @@ function setDateStuff() {
   info.hour = info.date.getHours();
   info.minute = info.date.getMinutes();
   info.maxDay = new Date(info.year, info.month + 1, 0).getDate();
+  info.guiMonth = info.month + 1;
 }
 
 function updateTime() {
