@@ -49,6 +49,9 @@ let info = {
   showArrowHelpers: true,
   incidentAngle: 0,
   efficiencyPercentage: 0,
+  passTime: false,
+  timeSpeed: 1,
+  timeIntervalID: null,
 };
 
 let dateStuff = {
@@ -391,12 +394,12 @@ function createTimeControls() {
         .onChange((value) => {
           info.date[setter](value);
           if (key == 'month') {
-            dateStuff[key].max = new Date(
+            dateStuff['day'].max = new Date(
               info.date.getFullYear(),
               info.date.getMonth(),
               0
             ).getDate();
-            dayController.max(dateStuff[key].max).setValue(1);
+            dayController.max(dateStuff['day'].max).setValue(1);
           }
           updateSunPosition(
             sunLight,
@@ -409,6 +412,22 @@ function createTimeControls() {
         });
     }
   });
+
+  timeFolder
+    .add(info, 'passTime')
+    .name('Passing')
+    .onChange((value) => {
+      info.passTime = value;
+      togglePassTime();
+    });
+
+  timeFolder
+    .add(info, 'timeSpeed', 1, 100)
+    .name('Speed')
+    .onChange(function (value) {
+      info.timeSpeed = value;
+      togglePassTime();
+    });
 }
 
 function calculateSolarPanelEnergyGeneration() {
@@ -498,6 +517,32 @@ function onWindowResize() {
   renderer.setSize(width, height);
   camera.aspect = width / height;
   camera.updateProjectionMatrix();
+}
+
+function passMinute() {
+  info.date = new Date(info.date.setMinutes(info.date.getMinutes() + 1));
+  updateSunPosition(
+    sunLight,
+    sunMesh,
+    info.latitude,
+    info.longitude,
+    info.date
+  );
+  calculateSolarPanelEnergyGeneration();
+}
+
+function togglePassTime() {
+  if (info.passTime) {
+    if (info.timeIntervalID) {
+      clearInterval(info.timeIntervalID);
+    }
+    info.timeIntervalID = setInterval(function () {
+      passMinute();
+    }, 1000 / info.timeSpeed);
+  } else {
+    clearInterval(info.timeIntervalID);
+    info.timeIntervalID = null;
+  }
 }
 
 function init() {
