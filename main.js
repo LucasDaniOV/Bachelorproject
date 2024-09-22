@@ -35,11 +35,11 @@ const settingsFolder = gui.addFolder('Settings');
 
 let sunLight;
 let sunMesh;
-let dayController;
 let panelCube;
 let panelCylinder;
 let sunLightDirectionHelper;
 let solarPanelDirectionHelper;
+let dayController;
 
 let info = {
   latitude: 50,
@@ -52,31 +52,7 @@ let info = {
   passTime: false,
   timeSpeed: 1,
   timeIntervalID: null,
-};
-
-let dateStuff = {
-  year: {
-    setter: 'setFullYear',
-  },
-  month: {
-    setter: 'setMonth',
-    min: 1,
-    max: 12,
-  },
-  day: {
-    setter: 'setDate',
-    min: 1,
-  },
-  hour: {
-    setter: 'setHours',
-    min: 1,
-    max: 24,
-  },
-  minutes: {
-    setter: 'setMinutes',
-    min: 0,
-    max: 60,
-  },
+  date: new Date(),
 };
 
 function animate() {
@@ -288,7 +264,7 @@ function getLocation() {
   }
 }
 
-function updateLocationGUI() {
+function createLocationControls() {
   locationFolder
     .add({ reset: getLocation }, 'reset')
     .name('Reset to current location');
@@ -326,92 +302,59 @@ function updateLocationGUI() {
     });
 }
 
-function setDate() {
-  const date = new Date();
-  info.date = date;
-  info.year = date.getFullYear();
-  info.month = date.getMonth() + 1;
-  info.day = date.getDate();
-  info.hour = date.getHours();
-  info.minutes = date.getMinutes();
-  dateStuff.day.max = new Date(
-    date.getFullYear(),
-    date.getMonth(),
-    0
-  ).getDate();
-  if (dayController) {
-    dayController.max(dateStuff.day.max).setValue(info.day);
-  }
-  gui.updateDisplay();
-  updateSunPosition(
-    sunLight,
-    sunMesh,
-    info.latitude,
-    info.longitude,
-    info.date
-  );
-}
-
 function createTimeControls() {
-  timeFolder.add({ reset: setDate }, 'reset').name('Reset to current date');
+  setDateStuff();
+  timeFolder
+    .add(
+      {
+        reset: () => {
+          info.date = new Date();
+          updateTime();
+        },
+      },
+      'reset'
+    )
+    .name('Reset to current date');
 
-  Object.keys(dateStuff).forEach((key) => {
-    const { setter, min, max } = dateStuff[key];
-    if (key == 'day') {
-      dayController = timeFolder
-        .add(info, key, min, max, 1)
-        .name(key.charAt(0).toUpperCase() + key.slice(1))
-        .onChange((value) => {
-          info.date[setter](value);
-          updateSunPosition(
-            sunLight,
-            sunMesh,
-            info.latitude,
-            info.longitude,
-            info.date
-          );
-          calculateSolarPanelEnergyGeneration();
-        });
-    } else if (key == 'year') {
-      timeFolder
-        .add(info, key)
-        .name(key.charAt(0).toUpperCase() + key.slice(1))
-        .onChange((value) => {
-          info.date[setter](value);
-          updateSunPosition(
-            sunLight,
-            sunMesh,
-            info.latitude,
-            info.longitude,
-            info.date
-          );
-          calculateSolarPanelEnergyGeneration();
-        });
-    } else {
-      timeFolder
-        .add(info, key, min, max, 1)
-        .name(key.charAt(0).toUpperCase() + key.slice(1))
-        .onChange((value) => {
-          info.date[setter](value);
-          if (key == 'month') {
-            dateStuff['day'].max = new Date(
-              info.date.getFullYear(),
-              info.date.getMonth(),
-              0
-            ).getDate();
-            dayController.max(dateStuff['day'].max).setValue(1);
-          }
-          updateSunPosition(
-            sunLight,
-            sunMesh,
-            info.latitude,
-            info.longitude,
-            info.date
-          );
-          calculateSolarPanelEnergyGeneration();
-        });
-    }
-  });
+  timeFolder
+    .add(info, 'year')
+    .name('Year')
+    .onChange((value) => {
+      info.date.setFullYear(value);
+      updateTime();
+    });
+
+  timeFolder
+    .add(info, 'month', 0, 11, 1)
+    .name('Month')
+    .onChange((value) => {
+      info.date.setMonth(value);
+      updateTime();
+    });
+
+  dayController = timeFolder
+    .add(info, 'day', 1, info.maxDay, 1)
+    .name('Day')
+    .onChange((value) => {
+      info.date.setDate(value);
+      updateTime();
+    });
+
+  timeFolder
+    .add(info, 'hour', 0, 23, 1)
+    .name('Hour')
+    .onChange((value) => {
+      info.date.setHours(value);
+      updateTime();
+    });
+
+  timeFolder
+    .add(info, 'minute', 0, 59, 1)
+    .name('Minute')
+    .onChange((value) => {
+      info.date.setMinutes(value);
+      updateTime();
+    });
 
   timeFolder
     .add(info, 'passTime')
@@ -519,8 +462,19 @@ function onWindowResize() {
   camera.updateProjectionMatrix();
 }
 
-function passMinute() {
-  info.date = new Date(info.date.setMinutes(info.date.getMinutes() + 1));
+function setDateStuff() {
+  info.year = info.date.getFullYear();
+  info.month = info.date.getMonth();
+  info.day = info.date.getDate();
+  info.hour = info.date.getHours();
+  info.minute = info.date.getMinutes();
+  info.maxDay = new Date(info.year, info.month + 1, 0).getDate();
+}
+
+function updateTime() {
+  setDateStuff();
+  dayController.max(info.maxDay);
+  gui.updateDisplay();
   updateSunPosition(
     sunLight,
     sunMesh,
@@ -529,6 +483,11 @@ function passMinute() {
     info.date
   );
   calculateSolarPanelEnergyGeneration();
+}
+
+function passMinute() {
+  info.date = new Date(info.date.setMinutes(info.date.getMinutes() + 1));
+  updateTime();
 }
 
 function togglePassTime() {
@@ -549,15 +508,13 @@ function init() {
   renderer.setSize(window.innerWidth, window.innerHeight);
 
   createSun();
-  setDate();
   loadGrassland();
   loadNavigation();
   loadHouse();
   addRoofSolarPanel();
   getLocation();
-  updateLocationGUI();
+  createLocationControls();
   createTimeControls();
-
   calculateSolarPanelEnergyGeneration();
   toggleArrowHelpers();
   displayPanelStats();
