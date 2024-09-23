@@ -48,11 +48,15 @@ let info = {
   azimuth: 0,
   showArrowHelpers: true,
   incidentAngle: 0,
-  efficiencyPercentage: 0,
+  angleAlignment: 0,
   passTime: false,
   timeSpeed: 1,
   timeIntervalID: null,
   date: new Date(),
+  solarPanels: 5,
+  wattPeak: 500,
+  currentWattMinute: 0,
+  totalKWH: 0,
 };
 
 function animate() {
@@ -224,7 +228,7 @@ function addRoofSolarPanel() {
     .onChange((value) => {
       info.tilt = value;
       panelCube.rotation.x = -Math.PI / 2 - THREE.MathUtils.degToRad(value);
-      calculateSolarPanelEnergyGeneration();
+      calculateEnergyProduction();
     });
 
   panelFolder
@@ -233,7 +237,23 @@ function addRoofSolarPanel() {
     .onChange((value) => {
       info.azimuth = value;
       panelCylinder.rotation.y = -THREE.MathUtils.degToRad(value);
-      calculateSolarPanelEnergyGeneration();
+      calculateEnergyProduction();
+    });
+
+  panelFolder
+    .add(info, 'solarPanels', 1, 100, 1)
+    .name('Solar Panels')
+    .onChange((value) => {
+      info.solarPanels = value;
+      calculateEnergyProduction();
+    });
+
+  panelFolder
+    .add(info, 'wattPeak', 1, 1000, 1)
+    .name('Panel Watt Peak (Wp)')
+    .onChange((value) => {
+      info.wattPeak = value;
+      calculateEnergyProduction();
     });
 }
 
@@ -259,7 +279,7 @@ function getLocation() {
         info.tilt,
         info.azimuth
       );
-      calculateSolarPanelEnergyGeneration();
+      calculateEnergyProduction();
     });
   }
 }
@@ -282,7 +302,7 @@ function createLocationControls() {
         info.tilt,
         info.azimuth
       );
-      calculateSolarPanelEnergyGeneration();
+      calculateEnergyProduction();
     });
   locationFolder
     .add(info, 'longitude', -180, 180)
@@ -298,7 +318,7 @@ function createLocationControls() {
         info.tilt,
         info.azimuth
       );
-      calculateSolarPanelEnergyGeneration();
+      calculateEnergyProduction();
     });
 }
 
@@ -373,7 +393,7 @@ function createTimeControls() {
     });
 }
 
-function calculateSolarPanelEnergyGeneration() {
+function calculateSolarPanelAlignment() {
   const tiltRad = THREE.MathUtils.degToRad(info.tilt) + Math.PI;
   const azimuthRad = THREE.MathUtils.degToRad(info.azimuth) - Math.PI / 2;
 
@@ -419,7 +439,7 @@ function calculateSolarPanelEnergyGeneration() {
   info.incidentAngle = angleDeg;
 
   const efficiency = Math.cos(angle);
-  info.efficiencyPercentage = Math.max(0, efficiency) * 100;
+  info.angleAlignment = Math.max(0, efficiency);
 }
 
 function toggleArrowHelpers() {
@@ -438,18 +458,44 @@ function toggleArrowHelpers() {
 }
 
 function displayPanelStats() {
-  panelFolder.add(info, 'incidentAngle').name('Incident Angle').listen();
-  panelFolder.add(info, 'efficiencyPercentage').name('Efficiency').listen();
+  panelFolder
+    .add(info, 'incidentAngle')
+    .step(0.01)
+    .name('Incident Angle')
+    .listen();
+  panelFolder.add(info, 'angleAlignment').step(0.01).name('Alignment').listen();
+
+  panelFolder.add(info, 'currentWattMinute').step(0.01).name('Watt').listen();
+  panelFolder.add(info, 'totalKWH').step(0.0001).name('total kWh').listen();
+
+  panelFolder
+    .add(
+      {
+        reset: () => {
+          info.totalKWH = 0;
+        },
+      },
+      'reset'
+    )
+    .name('Reset total kWh');
 
   const labels = panelFolder.domElement.getElementsByTagName('span');
   for (let label of labels) {
     if (
       label.innerHTML === 'Incident Angle' ||
-      label.innerHTML === 'Efficiency'
+      label.innerHTML === 'Alignment' ||
+      label.innerHTML === 'Watt' ||
+      label.innerHTML === 'total kWh'
     ) {
-      label.style.color = 'green';
-      label.style.fontSize = '15px';
-      label.style.fontWeight = 'bold';
+      if (label.innerHTML === 'Watt' || label.innerHTML === 'total kWh') {
+        label.style.color = 'yellow';
+        label.style.fontSize = '15px';
+        label.style.fontWeight = 'bold';
+      } else {
+        label.style.color = 'green';
+        label.style.fontSize = '15px';
+        label.style.fontWeight = 'bold';
+      }
     }
   }
 }
@@ -483,10 +529,11 @@ function updateTime() {
     info.longitude,
     info.date
   );
-  calculateSolarPanelEnergyGeneration();
+  calculateEnergyProduction();
 }
 
 function passMinute() {
+  info.totalKWH += info.currentWattMinute / 60 / 1000;
   info.date = new Date(info.date.setMinutes(info.date.getMinutes() + 1));
   updateTime();
 }
@@ -505,6 +552,15 @@ function togglePassTime() {
   }
 }
 
+function calculateEnergyProduction() {
+  calculateSolarPanelAlignment();
+  info.currentWattMinute =
+    info.wattPeak *
+    (sunLight.intensity / 8) *
+    info.angleAlignment *
+    info.solarPanels;
+}
+
 function init() {
   renderer.setSize(window.innerWidth, window.innerHeight);
 
@@ -516,7 +572,7 @@ function init() {
   getLocation();
   createLocationControls();
   createTimeControls();
-  calculateSolarPanelEnergyGeneration();
+  calculateEnergyProduction();
   toggleArrowHelpers();
   displayPanelStats();
 
