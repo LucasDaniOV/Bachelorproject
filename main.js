@@ -58,6 +58,7 @@ let info = {
   totalWattPeak: 2500,
   currentWattMinute: 0,
   totalKWH: 0,
+  sunIntensity: 1,
 };
 
 function animate() {
@@ -281,8 +282,7 @@ function getLocation() {
         info.latitude,
         info.longitude,
         info.date,
-        info.tilt,
-        info.azimuth
+        info.sunIntensity
       );
       calculateEnergyProduction();
     });
@@ -304,8 +304,7 @@ function createLocationControls() {
         info.latitude,
         info.longitude,
         info.date,
-        info.tilt,
-        info.azimuth
+        info.sunIntensity
       );
       calculateEnergyProduction();
     });
@@ -320,8 +319,7 @@ function createLocationControls() {
         info.latitude,
         info.longitude,
         info.date,
-        info.tilt,
-        info.azimuth
+        info.sunIntensity
       );
       calculateEnergyProduction();
     });
@@ -532,7 +530,8 @@ function updateTime() {
     sunMesh,
     info.latitude,
     info.longitude,
-    info.date
+    info.date,
+    info.sunIntensity
   );
   calculateEnergyProduction();
 }
@@ -566,6 +565,24 @@ function calculateEnergyProduction() {
     info.solarPanels;
 }
 
+function controlSunIntensity() {
+  settingsFolder
+    .add(info, 'sunIntensity', 0.1, 1, 0.01)
+    .name('Sun Intensity')
+    .onChange((value) => {
+      info.sunIntensity = value;
+      updateSunPosition(
+        sunLight,
+        sunMesh,
+        info.latitude,
+        info.longitude,
+        info.date,
+        info.sunIntensity
+      );
+      calculateEnergyProduction();
+    });
+}
+
 function init() {
   renderer.setSize(window.innerWidth, window.innerHeight);
 
@@ -580,6 +597,7 @@ function init() {
   calculateEnergyProduction();
   toggleArrowHelpers();
   displayPanelStats();
+  controlSunIntensity();
 
   renderer.setAnimationLoop(animate);
   document.body.appendChild(renderer.domElement);
