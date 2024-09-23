@@ -55,6 +55,7 @@ let info = {
   date: new Date(),
   solarPanels: 5,
   wattPeak: 500,
+  totalWattPeak: 2500,
   currentWattMinute: 0,
   totalKWH: 0,
 };
@@ -245,6 +246,7 @@ function addRoofSolarPanel() {
     .name('Solar Panels')
     .onChange((value) => {
       info.solarPanels = value;
+      info.totalWattPeak = info.wattPeak * info.solarPanels;
       calculateEnergyProduction();
     });
 
@@ -253,8 +255,11 @@ function addRoofSolarPanel() {
     .name('Panel Watt Peak (Wp)')
     .onChange((value) => {
       info.wattPeak = value;
+      info.totalWattPeak = info.wattPeak * info.solarPanels;
       calculateEnergyProduction();
     });
+
+  panelFolder.add(info, 'totalWattPeak').name('Total Watt Peak').listen();
 }
 
 function createSun() {
