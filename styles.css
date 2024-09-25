@@ -8,3 +8,76 @@
 .dg {
     width: auto !important;
 }
+
+#startButton {
+    position: absolute;
+    bottom: 20px;
+    right: 20px;
+    width: 125px;
+    height: 125px;
+    border-radius: 50%;
+    color: white;
+    border: none;
+    font-size: 20px;
+    box-shadow: 0px 4px 6px rgba(0, 0, 0, 0.2);
+    z-index: 1;
+}
+
+#startButton:hover {
+    cursor: pointer;
+}
+
+#buttonText {
+    font-size: 24px;
+    font-weight: bold;
+    text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.6);
+}
+
+.colorShift {
+    background: linear-gradient(45deg, #ff0000, #ff7f00, #ffff00, #00ff00, #0000ff, #4b0082, #8f00ff);
+    background-size: 400%;
+    animation: colorShift 10s infinite;
+}
+
+@keyframes colorShift {
+    0% {
+        background-position: 0% 50%;
+    }
+    50% {
+        background-position: 100% 50%;
+    }
+    100% {
+        background-position: 0% 50%;
+    }
+}
+
+.colorShiftWaiting {
+    background: black;
+}
+
+.gameStats {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    background-color: black;
+    color: white;
+    display: flex;
+    align-items: center;
+    padding: 20px;
+    gap: 20px;
+}
+
+#kwh,
+#turns {
+    font-size: 20px;
+    font-weight: 600;
+}
+
+#kwh {
+    color: #00ff00;
+}
+
+#turns {
+    color: #ff0000;
+}

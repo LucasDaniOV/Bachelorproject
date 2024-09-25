@@ -24,10 +24,16 @@ const textureLoader = new THREE.TextureLoader();
 
 const gui = new GUI();
 const panelFolder = gui.addFolder('Solar Panel');
-panelFolder.open();
 const locationFolder = gui.addFolder('Location');
 const timeFolder = gui.addFolder('Time');
 const settingsFolder = gui.addFolder('Settings');
+
+const button = document.querySelector('#startButton');
+const buttonText = document.querySelector('#buttonText');
+const kwh = document.querySelector('#kwh');
+const turns = document.querySelector('#turns');
+
+const startTurns = 5;
 
 let sunLight;
 let sunMesh;
@@ -36,6 +42,8 @@ let panelCylinder;
 let sunLightDirectionHelper;
 let solarPanelDirectionHelper;
 let dayController;
+
+let availableTurns = startTurns.valueOf();
 
 let info = {
     latitude: 50,
@@ -230,25 +238,11 @@ function addRoofSolarPanel() {
             calculateEnergyProduction();
         });
 
-    panelFolder
-        .add(info, 'solarPanels', 1, 100, 1)
-        .name('Solar Panels')
-        .onChange((value) => {
-            info.solarPanels = value;
-            info.totalWattPeak = info.wattPeak * info.solarPanels;
-            calculateEnergyProduction();
-        });
-
-    panelFolder
-        .add(info, 'wattPeak', 1, 1000, 1)
-        .name('Panel Watt Peak (Wp)')
-        .onChange((value) => {
-            info.wattPeak = value;
-            info.totalWattPeak = info.wattPeak * info.solarPanels;
-            calculateEnergyProduction();
-        });
-
-    panelFolder.add(info, 'totalWattPeak').name('Total Watt Peak').listen();
+    const wp = panelFolder.add(info, 'totalWattPeak').name('Total Watt Peak').listen();
+    const input = wp.domElement.querySelector('input');
+    input.disabled = true;
+    input.style.cursor = 'not-allowed';
+    input.style.backgroundColor = '#f0f0f0';
 }
 
 function createSun() {
@@ -343,22 +337,6 @@ function createTimeControls() {
             info.date.setMinutes(value);
             updateTime();
         });
-
-    timeFolder
-        .add(info, 'passTime')
-        .name('Passing')
-        .onChange((value) => {
-            info.passTime = value;
-            togglePassTime();
-        });
-
-    timeFolder
-        .add(info, 'timeSpeed', 1, 100)
-        .name('Speed')
-        .onChange(function (value) {
-            info.timeSpeed = value;
-            togglePassTime();
-        });
 }
 
 function calculateSolarPanelAlignment() {
@@ -368,9 +346,6 @@ function calculateSolarPanelAlignment() {
     const panelNormal = new THREE.Vector3(Math.sin(tiltRad) * Math.cos(azimuthRad), Math.cos(tiltRad), Math.sin(tiltRad) * Math.sin(azimuthRad)).normalize();
 
     const sunDirection = sunLight.position.clone().negate().normalize();
-
-    // console.log('panel direction', panelNormal);
-    // console.log('sun direction', sunDirection);
 
     if (!sunLightDirectionHelper) {
         sunLightDirectionHelper = new THREE.ArrowHelper(sunDirection, sunLight.position, 500, 0xff0000);
@@ -412,37 +387,19 @@ function toggleArrowHelpers() {
 }
 
 function displayPanelStats() {
-    panelFolder.add(info, 'incidentAngle').step(0.01).name('Incident Angle').listen();
-    panelFolder.add(info, 'angleAlignment').step(0.01).name('Alignment').listen();
+    const incidentAngleController = panelFolder.add(info, 'incidentAngle').name('Incident Angle').listen();
+    const angleAlignmentController = panelFolder.add(info, 'angleAlignment').name('Alignment').listen();
+    const currentWattController = panelFolder.add(info, 'currentWattMinute').name('Watt').listen();
 
-    panelFolder.add(info, 'currentWattMinute').step(0.01).name('Watt').listen();
-    panelFolder.add(info, 'totalKWH').step(0.0001).name('total kWh').listen();
-
-    panelFolder
-        .add(
-            {
-                reset: () => {
-                    info.totalKWH = 0;
-                },
-            },
-            'reset'
-        )
-        .name('Reset total kWh');
-
-    const labels = panelFolder.domElement.getElementsByTagName('span');
-    for (let label of labels) {
-        if (label.innerHTML === 'Incident Angle' || label.innerHTML === 'Alignment' || label.innerHTML === 'Watt' || label.innerHTML === 'total kWh') {
-            if (label.innerHTML === 'Watt' || label.innerHTML === 'total kWh') {
-                label.style.color = 'yellow';
-                label.style.fontSize = '15px';
-                label.style.fontWeight = 'bold';
-            } else {
-                label.style.color = 'green';
-                label.style.fontSize = '15px';
-                label.style.fontWeight = 'bold';
-            }
+    const controllers = [incidentAngleController, angleAlignmentController, currentWattController];
+    controllers.forEach((controller) => {
+        const input = controller.domElement.querySelector('input');
+        if (input) {
+            input.disabled = true;
+            input.style.cursor = 'not-allowed';
+            input.style.backgroundColor = '#f0f0f0';
         }
-    }
+    });
 }
 
 function onWindowResize() {
@@ -473,22 +430,9 @@ function updateTime() {
 
 function passMinute() {
     info.totalKWH += info.currentWattMinute / 60 / 1000;
+    kwh.innerHTML = info.totalKWH.toFixed(4);
     info.date = new Date(info.date.setMinutes(info.date.getMinutes() + 1));
     updateTime();
-}
-
-function togglePassTime() {
-    if (info.passTime) {
-        if (info.timeIntervalID) {
-            clearInterval(info.timeIntervalID);
-        }
-        info.timeIntervalID = setInterval(function () {
-            passMinute();
-        }, 1000 / info.timeSpeed);
-    } else {
-        clearInterval(info.timeIntervalID);
-        info.timeIntervalID = null;
-    }
 }
 
 function calculateEnergyProduction() {
@@ -496,15 +440,59 @@ function calculateEnergyProduction() {
     info.currentWattMinute = info.wattPeak * (sunLight.intensity / 8) * info.angleAlignment * info.solarPanels;
 }
 
-function controlSunIntensity() {
-    settingsFolder
-        .add(info, 'sunIntensity', 0.1, 1, 0.01)
-        .name('Sun Intensity')
-        .onChange((value) => {
-            info.sunIntensity = value;
-            updateSunPosition(sunLight, sunMesh, info.latitude, info.longitude, info.date, info.sunIntensity);
-            calculateEnergyProduction();
-        });
+function handleButtonClick() {
+    doTurn();
+}
+
+function doTurn() {
+    if (availableTurns <= 0) {
+        alert('No more turns');
+        return;
+    }
+
+    button.removeEventListener('click', handleButtonClick);
+
+    buttonText.innerHTML = 'Please wait';
+    startButton.classList.remove('colorShift');
+    startButton.classList.add('colorShiftWaiting');
+
+    gui.close();
+    gui.domElement.style.pointerEvents = 'none';
+
+    availableTurns--;
+    turns.innerHTML = availableTurns;
+
+    const totalTime = 60 * 24;
+
+    let turnPromise = new Promise((resolve) => {
+        for (let i = 0; i < totalTime; i++) {
+            setTimeout(() => {
+                passMinute();
+                if (i === totalTime - 1) resolve();
+            }, i * 1);
+        }
+    });
+
+    turnPromise.then(() => {
+        if (availableTurns == 0) {
+            buttonText.innerHTML = 'Game finished &#127881;';
+        } else {
+            buttonText.innerHTML = 'Next turn';
+            startButton.classList.remove('colorShiftWaiting');
+            startButton.classList.add('colorShift');
+            button.addEventListener('click', handleButtonClick);
+        }
+        gui.open();
+        gui.domElement.style.pointerEvents = 'auto';
+        openAllControls();
+    });
+}
+
+function openAllControls() {
+    panelFolder.open();
+    locationFolder.open();
+    timeFolder.open();
+    settingsFolder.open();
 }
 
 function init() {
@@ -521,12 +509,16 @@ function init() {
     calculateEnergyProduction();
     toggleArrowHelpers();
     displayPanelStats();
-    controlSunIntensity();
 
     renderer.setAnimationLoop(animate);
     document.body.appendChild(renderer.domElement);
 
     window.addEventListener('resize', onWindowResize, false);
+
+    button.addEventListener('click', handleButtonClick);
+    turns.innerHTML = availableTurns;
+
+    openAllControls();
 }
 
 init();
