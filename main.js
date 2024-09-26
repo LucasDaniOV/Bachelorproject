@@ -248,7 +248,11 @@ function addRoofSolarPanel() {
             calculateEnergyProduction();
         });
 
-    panelFolder.add(info, 'totalWattPeak').name('Total Watt Peak').listen();
+    const wp = panelFolder.add(info, 'totalWattPeak').name('Total Watt Peak').listen();
+    const input = wp.domElement.querySelector('input');
+    input.disabled = true;
+    input.style.cursor = 'not-allowed';
+    input.style.backgroundColor = '#f0f0f0';
 }
 
 function createSun() {
@@ -369,9 +373,6 @@ function calculateSolarPanelAlignment() {
 
     const sunDirection = sunLight.position.clone().negate().normalize();
 
-    // console.log('panel direction', panelNormal);
-    // console.log('sun direction', sunDirection);
-
     if (!sunLightDirectionHelper) {
         sunLightDirectionHelper = new THREE.ArrowHelper(sunDirection, sunLight.position, 500, 0xff0000);
         scene.add(sunLightDirectionHelper);
@@ -412,11 +413,11 @@ function toggleArrowHelpers() {
 }
 
 function displayPanelStats() {
-    panelFolder.add(info, 'incidentAngle').step(0.01).name('Incident Angle').listen();
-    panelFolder.add(info, 'angleAlignment').step(0.01).name('Alignment').listen();
-
-    panelFolder.add(info, 'currentWattMinute').step(0.01).name('Watt').listen();
-    panelFolder.add(info, 'totalKWH').step(0.0001).name('total kWh').listen();
+    let controllers = [];
+    controllers.push(panelFolder.add(info, 'incidentAngle').step(0.01).name('Incident Angle').listen());
+    controllers.push(panelFolder.add(info, 'angleAlignment').step(0.01).name('Alignment').listen());
+    controllers.push(panelFolder.add(info, 'currentWattMinute').step(0.01).name('Watt').listen());
+    controllers.push(panelFolder.add(info, 'totalKWH').step(0.0001).name('Total kWh').listen());
 
     panelFolder
         .add(
@@ -431,8 +432,8 @@ function displayPanelStats() {
 
     const labels = panelFolder.domElement.getElementsByTagName('span');
     for (let label of labels) {
-        if (label.innerHTML === 'Incident Angle' || label.innerHTML === 'Alignment' || label.innerHTML === 'Watt' || label.innerHTML === 'total kWh') {
-            if (label.innerHTML === 'Watt' || label.innerHTML === 'total kWh') {
+        if (label.innerHTML === 'Incident Angle' || label.innerHTML === 'Alignment' || label.innerHTML === 'Watt' || label.innerHTML === 'Total kWh') {
+            if (label.innerHTML === 'Watt' || label.innerHTML === 'Total kWh') {
                 label.style.color = 'yellow';
                 label.style.fontSize = '15px';
                 label.style.fontWeight = 'bold';
@@ -443,6 +444,15 @@ function displayPanelStats() {
             }
         }
     }
+
+    controllers.forEach((controller) => {
+        const input = controller.domElement.querySelector('input');
+        if (input) {
+            input.disabled = true;
+            input.style.cursor = 'not-allowed';
+            input.style.backgroundColor = '#f0f0f0';
+        }
+    });
 }
 
 function onWindowResize() {
