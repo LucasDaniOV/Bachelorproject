@@ -55,6 +55,7 @@ let info = {
     currentWattMinute: 0,
     totalKWH: 0,
     sunIntensity: 1,
+    currentMaxWatt: 0,
 };
 
 function animate() {
@@ -248,11 +249,16 @@ function addRoofSolarPanel() {
             calculateEnergyProduction();
         });
 
-    const wp = panelFolder.add(info, 'totalWattPeak').name('Total Watt Peak').listen();
-    const input = wp.domElement.querySelector('input');
-    input.disabled = true;
-    input.style.cursor = 'not-allowed';
-    input.style.backgroundColor = '#f0f0f0';
+    const disabled = [];
+    // disabled.push(panelFolder.add(info, 'totalWattPeak').name('Total Watt Peak').listen());
+    disabled.push(panelFolder.add(info, 'currentMaxWatt').name('Max Possible Watt').listen());
+
+    disabled.forEach((controller) => {
+        const input = controller.domElement.querySelector('input');
+        input.disabled = true;
+        input.style.cursor = 'not-allowed';
+        input.style.backgroundColor = '#f0f0f0';
+    });
 }
 
 function createSun() {
@@ -503,6 +509,7 @@ function togglePassTime() {
 
 function calculateEnergyProduction() {
     calculateSolarPanelAlignment();
+    info.currentMaxWatt = info.wattPeak * (sunLight.intensity / 8) * 1 * info.solarPanels;
     info.currentWattMinute = info.wattPeak * (sunLight.intensity / 8) * info.angleAlignment * info.solarPanels;
 }
 
