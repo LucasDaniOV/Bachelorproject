@@ -36,6 +36,8 @@ let panelCylinder;
 let sunLightDirectionHelper;
 let solarPanelDirectionHelper;
 let dayController;
+let tiltAngleController;
+let azimuthAngleController;
 
 let info = {
     latitude: 50,
@@ -56,6 +58,7 @@ let info = {
     totalKWH: 0,
     sunIntensity: 1,
     currentMaxWatt: 0,
+    alignPanel: false,
 };
 
 function animate() {
@@ -213,7 +216,35 @@ function addRoofSolarPanel() {
 
     scene.add(panelCylinder);
 
+    function toggleTiltAndAzimuthControllers() {
+        [tiltAngleController, azimuthAngleController].forEach((controller) => {
+            const input = controller.domElement.querySelector('input');
+            const slider = controller.domElement.querySelector('.slider');
+
+            if (info.alignPanel) {
+                input.disabled = true;
+                input.style.cursor = 'not-allowed';
+                input.style.backgroundColor = '#f0f0f0';
+                slider.style.pointerEvents = 'none';
+            } else {
+                input.disabled = false;
+                input.style.cursor = '';
+                input.style.backgroundColor = '';
+                slider.style.pointerEvents = '';
+            }
+        });
+    }
+
     panelFolder
+        .add(info, 'alignPanel')
+        .name('Automatic')
+        .onChange((value) => {
+            info.alignPanel = value;
+            toggleTiltAndAzimuthControllers();
+            calculateEnergyProduction();
+        });
+
+    tiltAngleController = panelFolder
         .add(info, 'tilt', 0, 90)
         .name('Tilt Angle')
         .onChange((value) => {
@@ -222,7 +253,7 @@ function addRoofSolarPanel() {
             calculateEnergyProduction();
         });
 
-    panelFolder
+    azimuthAngleController = panelFolder
         .add(info, 'azimuth', 0, 360)
         .name('Azimuth Angle')
         .onChange((value) => {
@@ -251,7 +282,7 @@ function addRoofSolarPanel() {
 
     const disabled = [];
     // disabled.push(panelFolder.add(info, 'totalWattPeak').name('Total Watt Peak').listen());
-    disabled.push(panelFolder.add(info, 'currentMaxWatt').name('Max Possible Watt').listen());
+    disabled.push(panelFolder.add(info, 'currentMaxWatt').step(0.01).name('Max Possible Watt').listen());
 
     disabled.forEach((controller) => {
         const input = controller.domElement.querySelector('input');
@@ -372,6 +403,9 @@ function createTimeControls() {
 }
 
 function calculateSolarPanelAlignment() {
+    if (info.alignPanel) {
+        alignPanel();
+    }
     const tiltRad = THREE.MathUtils.degToRad(info.tilt) + Math.PI;
     const azimuthRad = THREE.MathUtils.degToRad(info.azimuth) - Math.PI / 2;
 
@@ -404,6 +438,29 @@ function calculateSolarPanelAlignment() {
 
     const efficiency = Math.cos(angle);
     info.angleAlignment = Math.max(0, efficiency);
+}
+
+function alignPanel() {
+    if (info.currentMaxWatt === 0) {
+        return;
+    }
+    const sunDirection = sunLight.position.clone().negate().normalize();
+    const panelNormal = sunDirection.clone().normalize();
+
+    const tilt = Math.acos(panelNormal.y);
+    const azimuth = Math.atan2(panelNormal.z, panelNormal.x);
+
+    const tiltDeg = THREE.MathUtils.radToDeg(tilt - Math.PI);
+    const azimuthDeg = THREE.MathUtils.radToDeg(azimuth - Math.PI / 2);
+    const azimuthDegClamped = (azimuthDeg + 360) % 360;
+
+    info.tilt = Math.abs(tiltDeg);
+    info.tilt > 90 ? (info.tilt = 90) : null;
+    info.azimuth = Math.abs(azimuthDegClamped);
+
+    panelCube.rotation.x = -Math.PI / 2 - THREE.MathUtils.degToRad(info.tilt);
+    panelCylinder.rotation.y = -THREE.MathUtils.degToRad(info.azimuth);
+    gui.updateDisplay();
 }
 
 function toggleArrowHelpers() {
