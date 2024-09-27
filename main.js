@@ -42,7 +42,7 @@ let info = {
     longitude: 5,
     tilt: 0,
     azimuth: 0,
-    showArrowHelpers: true,
+    showArrowHelpers: false,
     incidentAngle: 0,
     angleAlignment: 0,
     passTime: false,
@@ -394,6 +394,9 @@ function calculateSolarPanelAlignment() {
         solarPanelDirectionHelper.position.copy(panelCylinder.position);
         solarPanelDirectionHelper.setDirection(panelNormal);
     }
+
+    sunLightDirectionHelper.visible = info.showArrowHelpers;
+    solarPanelDirectionHelper.visible = info.showArrowHelpers;
 
     const angle = panelNormal.angleTo(sunDirection);
     const angleDeg = THREE.MathUtils.radToDeg(angle);
