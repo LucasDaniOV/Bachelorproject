@@ -8,6 +8,75 @@ import { createCamera } from './src/components/camera';
 import { createScene } from './src/components/scene';
 import { createSunLight, createSunMesh, updateSunPosition } from './src/components/sun';
 
+class CustomGUI extends GUI {
+    constructor() {
+        super();
+    }
+
+    addFolder(name) {
+        const folder = super.addFolder(name);
+
+        const originalAdd = folder.add.bind(folder);
+        folder.add = (object, property, min, max, step) => {
+            const controller = originalAdd(object, property, min, max, step);
+            const slider = controller.domElement.querySelector('.slider');
+            if (!slider) {
+                return controller;
+            }
+
+            const decrementButton = document.createElement('button');
+            decrementButton.innerText = '-';
+            decrementButton.style = `
+                height: 20px;
+                width: 20px;
+                top: 0;
+                position: absolute;
+                left: 0;
+            `;
+            decrementButton.onclick = () => {
+                if (object[property] > min) {
+                    object[property] -= step;
+                    controller.setValue(object[property]);
+                }
+            };
+
+            const incrementButton = document.createElement('button');
+            incrementButton.innerText = '+';
+            incrementButton.style = `
+                height: 20px;
+                width: 20px;
+                top: 0;
+                position: absolute;
+                right: 63px;
+            `;
+            incrementButton.onclick = () => {
+                if (object[property] < max) {
+                    object[property] += step;
+                    controller.setValue(object[property]);
+                }
+            };
+
+            slider.style = `
+                position: relative;
+                width: calc(66% - 50px);
+                position: absolute;
+                left: 30px;
+            `;
+
+            controller.domElement.style = `
+                position: relative;
+            `;
+
+            controller.domElement.appendChild(decrementButton);
+            controller.domElement.appendChild(incrementButton);
+
+            return controller;
+        };
+
+        return folder;
+    }
+}
+
 const scene = createScene();
 const camera = createCamera();
 const renderer = new THREE.WebGLRenderer();
@@ -22,7 +91,7 @@ const gltfLoader = new GLTFLoader();
 const fontLoader = new FontLoader();
 const textureLoader = new THREE.TextureLoader();
 
-const gui = new GUI();
+const gui = new CustomGUI();
 const panelFolder = gui.addFolder('Solar Panel');
 panelFolder.open();
 const locationFolder = gui.addFolder('Location');
@@ -245,7 +314,7 @@ function addRoofSolarPanel() {
         });
 
     tiltAngleController = panelFolder
-        .add(info, 'tilt', 0, 90)
+        .add(info, 'tilt', 0, 90, 1)
         .name('Tilt Angle')
         .onChange((value) => {
             info.tilt = value;
@@ -254,7 +323,7 @@ function addRoofSolarPanel() {
         });
 
     azimuthAngleController = panelFolder
-        .add(info, 'azimuth', 0, 360)
+        .add(info, 'azimuth', 0, 360, 1)
         .name('Azimuth Angle')
         .onChange((value) => {
             info.azimuth = value;
@@ -314,7 +383,7 @@ function getLocation() {
 function createLocationControls() {
     locationFolder.add({ reset: getLocation }, 'reset').name('Reset to current location');
     locationFolder
-        .add(info, 'latitude', -90, 90)
+        .add(info, 'latitude', -90, 90, 1)
         .name('Latitude')
         .onChange((value) => {
             info.latitude = value;
@@ -322,7 +391,7 @@ function createLocationControls() {
             calculateEnergyProduction();
         });
     locationFolder
-        .add(info, 'longitude', -180, 180)
+        .add(info, 'longitude', -180, 180, 1)
         .name('Longitude')
         .onChange((value) => {
             info.longitude = value;
@@ -394,7 +463,7 @@ function createTimeControls() {
         });
 
     timeFolder
-        .add(info, 'timeSpeed', 1, 100)
+        .add(info, 'timeSpeed', 1, 100, 1)
         .name('Speed')
         .onChange(function (value) {
             info.timeSpeed = value;
