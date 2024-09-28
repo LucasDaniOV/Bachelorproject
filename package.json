@@ -10,6 +10,7 @@
   "license": "ISC",
   "dependencies": {
     "dat.gui": "^0.7.9",
+    "i18next": "^23.15.1",
     "suncalc": "^1.9.0",
     "three": "^0.168.0"
   },
