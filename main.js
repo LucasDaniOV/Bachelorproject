@@ -656,12 +656,12 @@ function controlSunIntensity() {
 function init() {
     renderer.setSize(window.innerWidth, window.innerHeight);
 
+    getLocation();
     createSun();
     loadGrassland();
     loadNavigation();
     loadHouse();
     addRoofSolarPanel();
-    getLocation();
     createLocationControls();
     createTimeControls();
     calculateEnergyProduction();
