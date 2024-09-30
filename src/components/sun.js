@@ -28,7 +28,7 @@ function updateSunPosition(sunLight, sunMesh, latitude, longitude, date, userMul
     sunLight.position.set(sunX, sunY, sunZ);
     sunMesh.position.set(sunX, sunY, sunZ);
 
-    const intensity = Math.max(0.1, (sunY / radius) * multiplier * userMultiplier);
+    const intensity = Math.max(0, (sunY / radius) * multiplier * userMultiplier);
     sunLight.intensity = intensity;
 }
 

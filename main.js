@@ -8,6 +8,75 @@ import { createCamera } from './src/components/camera';
 import { createScene } from './src/components/scene';
 import { createSunLight, createSunMesh, updateSunPosition } from './src/components/sun';
 
+class CustomGUI extends GUI {
+    constructor() {
+        super();
+    }
+
+    addFolder(name) {
+        const folder = super.addFolder(name);
+
+        const originalAdd = folder.add.bind(folder);
+        folder.add = (object, property, min, max, step) => {
+            const controller = originalAdd(object, property, min, max, step);
+            const slider = controller.domElement.querySelector('.slider');
+            if (!slider) {
+                return controller;
+            }
+
+            const decrementButton = document.createElement('button');
+            decrementButton.innerText = '-';
+            decrementButton.style = `
+                height: 20px;
+                width: 20px;
+                top: 0;
+                position: absolute;
+                left: 0;
+            `;
+            decrementButton.onclick = () => {
+                if (object[property] > min) {
+                    object[property] -= step;
+                    controller.setValue(object[property]);
+                }
+            };
+
+            const incrementButton = document.createElement('button');
+            incrementButton.innerText = '+';
+            incrementButton.style = `
+                height: 20px;
+                width: 20px;
+                top: 0;
+                position: absolute;
+                right: 63px;
+            `;
+            incrementButton.onclick = () => {
+                if (object[property] < max) {
+                    object[property] += step;
+                    controller.setValue(object[property]);
+                }
+            };
+
+            slider.style = `
+                position: relative;
+                width: calc(66% - 50px);
+                position: absolute;
+                left: 30px;
+            `;
+
+            controller.domElement.style = `
+                position: relative;
+            `;
+
+            controller.domElement.appendChild(decrementButton);
+            controller.domElement.appendChild(incrementButton);
+
+            return controller;
+        };
+
+        return folder;
+    }
+}
+
 const scene = createScene();
 const camera = createCamera();
 const renderer = new THREE.WebGLRenderer();
@@ -22,11 +91,45 @@ const gltfLoader = new GLTFLoader();
 const fontLoader = new FontLoader();
 const textureLoader = new THREE.TextureLoader();
 
-const gui = new GUI();
-const panelFolder = gui.addFolder('Solar Panel');
-const locationFolder = gui.addFolder('Location');
-const timeFolder = gui.addFolder('Time');
-const settingsFolder = gui.addFolder('Settings');
+const text = {
+    panelFolderName: { English: 'Solar Panel', Nederlands: 'Zonnepaneel' },
+    automatic: { English: 'Automatic', Nederlands: 'Automatisch' },
+    tiltAngle: { English: 'Tilt angle', Nederlands: 'Kantelhoek' },
+    azimuthAngle: { English: 'Azimuth angle', Nederlands: 'Azimuthoek' },
+    solarPanels: { English: 'Solar panels', Nederlands: 'Zonnepanelen' },
+    panelWattPeak: { English: 'Panel Watt peak (Wp)', Nederlands: 'Paneel Watt piek (Wp)' },
+    maxPossibleWatt: { English: 'Max possible Watt', Nederlands: 'Max Watt mogelijk' },
+    incidentAngle: { English: 'Incident angle', Nederlands: 'Invalshoek' },
+    alignment: { English: 'Alignment', Nederlands: 'Uitlijning' },
+    totalKWH: { English: 'Total kWh', Nederlands: 'Totaal kWh' },
+    resetTotalKWH: { English: 'Reset total kWh', Nederlands: 'Reset totaal kWh' },
+    locationFolderName: { English: 'Location', Nederlands: 'Locatie' },
+    resetLocation: { English: 'Reset to current location', Nederlands: 'Reset naar huidige locatie' },
+    latitude: { English: 'Latitude', Nederlands: 'Breedtegraad' },
+    longitude: { English: 'Longitude', Nederlands: 'Lengtegraad' },
+    timeFolderName: { English: 'Time', Nederlands: 'Tijd' },
+    resetTime: { English: 'Reset to current date', Nederlands: 'Reset naar huidige datum' },
+    year: { English: 'Year', Nederlands: 'Jaar' },
+    month: { English: 'Month', Nederlands: 'Maand' },
+    day: { English: 'Day', Nederlands: 'Dag' },
+    hour: { English: 'Hour', Nederlands: 'Uur' },
+    minute: { English: 'Minute', Nederlands: 'Minuut' },
+    passingTime: { English: 'Passing', Nederlands: 'Lopend' },
+    speed: { English: 'Speed', Nederlands: 'Snelheid' },
+    settingsFolderName: { English: 'Settings', Nederlands: 'Instellingen' },
+    vectorDirections: { English: 'Vector directions', Nederlands: 'Vector richtingen' },
+    sunIntensity: { English: 'Sun intensity', Nederlands: 'Zon intensiteit' },
+    language: { English: 'Language', Nederlands: 'Taal' },
+    closeControls: { English: 'Close Controls', Nederlands: 'Sluit Controles' },
+    openControls: { English: 'Open Controls', Nederlands: 'Open Controles' },
+};
+
+let gui;
+let closeGuiButton;
+let panelFolder;
+let locationFolder;
+let timeFolder;
+let settingsFolder;
 
 const button = document.querySelector('#startButton');
 const buttonText = document.querySelector('#buttonText');
@@ -42,6 +145,8 @@ let panelCylinder;
 let sunLightDirectionHelper;
 let solarPanelDirectionHelper;
 let dayController;
+let tiltAngleController;
+let azimuthAngleController;
 
 let availableTurns = startTurns.valueOf();
 
@@ -50,7 +155,7 @@ let info = {
     longitude: 5,
     tilt: 0,
     azimuth: 0,
-    showArrowHelpers: true,
+    showArrowHelpers: false,
     incidentAngle: 0,
     angleAlignment: 0,
     passTime: false,
@@ -63,6 +168,9 @@ let info = {
     currentWattMinute: 0,
     totalKWH: 0,
     sunIntensity: 1,
+    currentMaxWatt: 0,
+    alignPanel: false,
+    lang: 'Nederlands',
 };
 
 function animate() {
@@ -219,26 +327,28 @@ function addRoofSolarPanel() {
     panelCylinder.receiveShadow = true;
 
     scene.add(panelCylinder);
+}
 
-    panelFolder
-        .add(info, 'tilt', 0, 90)
-        .name('Tilt Angle')
+function addPanelControls() {
+    tiltAngleController = panelFolder
+        .add(info, 'tilt', 0, 90, 1)
+        .name(text.tiltAngle[info.lang])
         .onChange((value) => {
             info.tilt = value;
             panelCube.rotation.x = -Math.PI / 2 - THREE.MathUtils.degToRad(value);
             calculateEnergyProduction();
         });
 
-    panelFolder
-        .add(info, 'azimuth', 0, 360)
-        .name('Azimuth Angle')
+    azimuthAngleController = panelFolder
+        .add(info, 'azimuth', 0, 360, 1)
+        .name(text.azimuthAngle[info.lang])
         .onChange((value) => {
             info.azimuth = value;
             panelCylinder.rotation.y = -THREE.MathUtils.degToRad(value);
             calculateEnergyProduction();
         });
 
-    const wp = panelFolder.add(info, 'totalWattPeak').name('Total Watt Peak').listen();
+    const wp = panelFolder.add(info, 'currentMaxWatt').name(text.maxPossibleWatt[info.lang]).listen();
     const input = wp.domElement.querySelector('input');
     input.disabled = true;
     input.style.cursor = 'not-allowed';
@@ -265,18 +375,18 @@ function getLocation() {
 }
 
 function createLocationControls() {
-    locationFolder.add({ reset: getLocation }, 'reset').name('Reset to current location');
+    locationFolder.add({ reset: getLocation }, 'reset').name(text.resetLocation[info.lang]);
     locationFolder
-        .add(info, 'latitude', -90, 90)
-        .name('Latitude')
+        .add(info, 'latitude', -90, 90, 0.1)
+        .name(text.latitude[info.lang])
         .onChange((value) => {
             info.latitude = value;
             updateSunPosition(sunLight, sunMesh, info.latitude, info.longitude, info.date, info.sunIntensity);
             calculateEnergyProduction();
         });
     locationFolder
-        .add(info, 'longitude', -180, 180)
-        .name('Longitude')
+        .add(info, 'longitude', -180, 180, 0.1)
+        .name(text.longitude[info.lang])
         .onChange((value) => {
             info.longitude = value;
             updateSunPosition(sunLight, sunMesh, info.latitude, info.longitude, info.date, info.sunIntensity);
@@ -296,11 +406,11 @@ function createTimeControls() {
             },
             'reset'
         )
-        .name('Reset to current date');
+        .name(text.resetTime[info.lang]);
 
     timeFolder
         .add(info, 'year')
-        .name('Year')
+        .name(text.year[info.lang])
         .onChange((value) => {
             info.date.setFullYear(value);
             updateTime();
@@ -308,7 +418,7 @@ function createTimeControls() {
 
     timeFolder
         .add(info, 'guiMonth', 1, 12, 1)
-        .name('Month')
+        .name(text.month[info.lang])
         .onChange((value) => {
             info.date.setMonth(value - 1); // months range: 0-11
             updateTime();
@@ -316,7 +426,7 @@ function createTimeControls() {
 
     dayController = timeFolder
         .add(info, 'day', 1, info.maxDay, 1)
-        .name('Day')
+        .name(text.day[info.lang])
         .onChange((value) => {
             info.date.setDate(value);
             updateTime();
@@ -324,7 +434,7 @@ function createTimeControls() {
 
     timeFolder
         .add(info, 'hour', 0, 23, 1)
-        .name('Hour')
+        .name(text.hour[info.lang])
         .onChange((value) => {
             info.date.setHours(value);
             updateTime();
@@ -332,7 +442,7 @@ function createTimeControls() {
 
     timeFolder
         .add(info, 'minute', 0, 59, 1)
-        .name('Minute')
+        .name(text.minute[info.lang])
         .onChange((value) => {
             info.date.setMinutes(value);
             updateTime();
@@ -340,6 +450,9 @@ function createTimeControls() {
 }
 
 function calculateSolarPanelAlignment() {
+    if (info.alignPanel) {
+        alignPanel();
+    }
     const tiltRad = THREE.MathUtils.degToRad(info.tilt) + Math.PI;
     const azimuthRad = THREE.MathUtils.degToRad(info.azimuth) - Math.PI / 2;
 
@@ -363,6 +476,9 @@ function calculateSolarPanelAlignment() {
         solarPanelDirectionHelper.setDirection(panelNormal);
     }
 
+    sunLightDirectionHelper.visible = info.showArrowHelpers;
+    solarPanelDirectionHelper.visible = info.showArrowHelpers;
+
     const angle = panelNormal.angleTo(sunDirection);
     const angleDeg = THREE.MathUtils.radToDeg(angle);
     info.incidentAngle = angleDeg;
@@ -371,10 +487,33 @@ function calculateSolarPanelAlignment() {
     info.angleAlignment = Math.max(0, efficiency);
 }
 
+function alignPanel() {
+    if (info.currentMaxWatt === 0) {
+        return;
+    }
+    const sunDirection = sunLight.position.clone().negate().normalize();
+    const panelNormal = sunDirection.clone().normalize();
+
+    const tilt = Math.acos(panelNormal.y);
+    const azimuth = Math.atan2(panelNormal.z, panelNormal.x);
+
+    const tiltDeg = THREE.MathUtils.radToDeg(tilt - Math.PI);
+    const azimuthDeg = THREE.MathUtils.radToDeg(azimuth - Math.PI / 2);
+    const azimuthDegClamped = (azimuthDeg + 360) % 360;
+
+    info.tilt = Math.abs(tiltDeg);
+    info.tilt > 90 ? (info.tilt = 90) : null;
+    info.azimuth = Math.abs(azimuthDegClamped);
+
+    panelCube.rotation.x = -Math.PI / 2 - THREE.MathUtils.degToRad(info.tilt);
+    panelCylinder.rotation.y = -THREE.MathUtils.degToRad(info.azimuth);
+    gui.updateDisplay();
+}
+
 function toggleArrowHelpers() {
     settingsFolder
         .add(info, 'showArrowHelpers')
-        .name('Vector directions')
+        .name(text.vectorDirections[info.lang])
         .onChange((value) => {
             info.showArrowHelpers = value;
             if (sunLightDirectionHelper) {
@@ -387,11 +526,38 @@ function toggleArrowHelpers() {
 }
 
 function displayPanelStats() {
-    const incidentAngleController = panelFolder.add(info, 'incidentAngle').name('Incident Angle').listen();
-    const angleAlignmentController = panelFolder.add(info, 'angleAlignment').name('Alignment').listen();
-    const currentWattController = panelFolder.add(info, 'currentWattMinute').name('Watt').listen();
+    let controllers = [];
+    controllers.push(panelFolder.add(info, 'incidentAngle').step(0.01).name(text.incidentAngle[info.lang]).listen());
+    controllers.push(panelFolder.add(info, 'angleAlignment').step(0.01).name(text.alignment[info.lang]).listen());
+    controllers.push(panelFolder.add(info, 'currentWattMinute').step(0.01).name('Watt').listen());
+    controllers.push(panelFolder.add(info, 'totalKWH').step(0.0001).name(text.totalKWH[info.lang]).listen());
 
-    const controllers = [incidentAngleController, angleAlignmentController, currentWattController];
+    // panelFolder
+    //     .add(
+    //         {
+    //             reset: () => {
+    //                 info.totalKWH = 0;
+    //             },
+    //         },
+    //         'reset'
+    //     )
+    //     .name(text.resetTotalKWH[info.lang]);
+
+    const labels = panelFolder.domElement.getElementsByTagName('span');
+    for (let label of labels) {
+        if (label.innerHTML === text.incidentAngle[info.lang] || label.innerHTML === text.alignment[info.lang] || label.innerHTML === 'Watt' || label.innerHTML === text.totalKWH[info.lang]) {
+            if (label.innerHTML === 'Watt' || label.innerHTML === text.totalKWH[info.lang]) {
+                label.style.color = 'yellow';
+                label.style.fontSize = '15px';
+                label.style.fontWeight = 'bold';
+            } else {
+                label.style.color = 'green';
+                label.style.fontSize = '15px';
+                label.style.fontWeight = 'bold';
+            }
+        }
+    }
+
     controllers.forEach((controller) => {
         const input = controller.domElement.querySelector('input');
         if (input) {
@@ -437,6 +603,7 @@ function passMinute() {
 
 function calculateEnergyProduction() {
     calculateSolarPanelAlignment();
+    info.currentMaxWatt = info.wattPeak * (sunLight.intensity / 8) * 1 * info.solarPanels;
     info.currentWattMinute = info.wattPeak * (sunLight.intensity / 8) * info.angleAlignment * info.solarPanels;
 }
 
@@ -484,7 +651,7 @@ function doTurn() {
         }
         gui.open();
         gui.domElement.style.pointerEvents = 'auto';
-        openAllControls();
+        // openAllControls();
     });
 }
 
@@ -495,30 +662,96 @@ function openAllControls() {
     settingsFolder.open();
 }
 
+function createFolders() {
+    panelFolder = gui.addFolder(text.panelFolderName[info.lang]);
+    locationFolder = gui.addFolder(text.locationFolderName[info.lang]);
+    timeFolder = gui.addFolder(text.timeFolderName[info.lang]);
+    settingsFolder = gui.addFolder(text.settingsFolderName[info.lang]);
+}
+
+function addLanguageControl() {
+    settingsFolder
+        .add(info, 'lang', ['English', 'Nederlands'])
+        .name(text.language[info.lang])
+        .onChange((value) => {
+            info.lang = value;
+            let isPanelFolderClosed = panelFolder.closed;
+            let isLocationFolderClosed = locationFolder.closed;
+            let isTimeFolderClosed = timeFolder.closed;
+            let isSettingsFolderClosed = settingsFolder.closed;
+            gui.destroy();
+            addGui();
+
+            if (!isPanelFolderClosed) {
+                panelFolder.open();
+            }
+            if (!isLocationFolderClosed) {
+                locationFolder.open();
+            }
+            if (!isTimeFolderClosed) {
+                timeFolder.open();
+            }
+            if (!isSettingsFolderClosed) {
+                settingsFolder.open();
+            }
+
+            translateCloseButton();
+        });
+}
+
+function addSettings() {
+    toggleArrowHelpers();
+    addLanguageControl();
+}
+
+function addGui() {
+    gui = new CustomGUI();
+    createFolders();
+    addPanelControls();
+    createLocationControls();
+    createTimeControls();
+    displayPanelStats();
+    addSettings();
+    closeGuiButton = document.querySelector('.close-button');
+    closeGuiButton.addEventListener('click', translateCloseButton);
+}
+
+function translateCloseButton() {
+    const ul = closeGuiButton.parentElement.querySelector('ul');
+    const isClosed = ul.classList.contains('closed');
+
+    if (isClosed) {
+        closeGuiButton.innerHTML = text.openControls[info.lang];
+    } else {
+        closeGuiButton.innerHTML = text.closeControls[info.lang];
+    }
+}
+
 function init() {
     renderer.setSize(window.innerWidth, window.innerHeight);
 
+    getLocation();
     createSun();
     loadGrassland();
     loadNavigation();
     loadHouse();
     addRoofSolarPanel();
-    getLocation();
-    createLocationControls();
-    createTimeControls();
     calculateEnergyProduction();
-    toggleArrowHelpers();
-    displayPanelStats();
+
+    addGui();
+    panelFolder.open();
 
     renderer.setAnimationLoop(animate);
     document.body.appendChild(renderer.domElement);
+
+    window.addEventListener('DOMContentLoaded', () => {
+        translateCloseButton();
+    });
 
     window.addEventListener('resize', onWindowResize, false);
 
     button.addEventListener('click', handleButtonClick);
     turns.innerHTML = availableTurns;
-
-    openAllControls();
 }
 
 init();
