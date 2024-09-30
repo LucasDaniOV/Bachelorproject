@@ -92,24 +92,40 @@ const fontLoader = new FontLoader();
 const textureLoader = new THREE.TextureLoader();
 
 const text = {
-    language: { English: 'Language', Nederlands: 'Taal' },
     panelFolderName: { English: 'Solar Panel', Nederlands: 'Zonnepaneel' },
     automatic: { English: 'Automatic', Nederlands: 'Automatisch' },
-    tiltAngle: { English: 'Tilt Angle', Nederlands: 'Kantelhoek' },
-    azimuthAngle: { English: 'Azimuth Angle', Nederlands: 'Azimuthoek' },
-    solarPanels: { English: 'Solar Panels', Nederlands: 'Zonnepanelen' },
-    panelWattPeak: { English: 'Panel Watt Peak (Wp)', Nederlands: 'Paneel Watt Piek (Wp)' },
-    maxPossibleWatt: { English: 'Max Possible Watt', Nederlands: 'Max Watt Mogelijk' },
-    incidentAngle: { English: 'Incident Angle', Nederlands: 'Invalshoek' },
+    tiltAngle: { English: 'Tilt angle', Nederlands: 'Kantelhoek' },
+    azimuthAngle: { English: 'Azimuth angle', Nederlands: 'Azimuthoek' },
+    solarPanels: { English: 'Solar panels', Nederlands: 'Zonnepanelen' },
+    panelWattPeak: { English: 'Panel Watt peak (Wp)', Nederlands: 'Paneel Watt piek (Wp)' },
+    maxPossibleWatt: { English: 'Max possible Watt', Nederlands: 'Max Watt mogelijk' },
+    incidentAngle: { English: 'Incident angle', Nederlands: 'Invalshoek' },
     alignment: { English: 'Alignment', Nederlands: 'Uitlijning' },
     totalKWH: { English: 'Total kWh', Nederlands: 'Totaal kWh' },
     resetTotalKWH: { English: 'Reset total kWh', Nederlands: 'Reset totaal kWh' },
     locationFolderName: { English: 'Location', Nederlands: 'Locatie' },
+    resetLocation: { English: 'Reset to current location', Nederlands: 'Reset naar huidige locatie' },
+    latitude: { English: 'Latitude', Nederlands: 'Breedtegraad' },
+    longitude: { English: 'Longitude', Nederlands: 'Lengtegraad' },
     timeFolderName: { English: 'Time', Nederlands: 'Tijd' },
+    resetTime: { English: 'Reset to current date', Nederlands: 'Reset naar huidige datum' },
+    year: { English: 'Year', Nederlands: 'Jaar' },
+    month: { English: 'Month', Nederlands: 'Maand' },
+    day: { English: 'Day', Nederlands: 'Dag' },
+    hour: { English: 'Hour', Nederlands: 'Uur' },
+    minute: { English: 'Minute', Nederlands: 'Minuut' },
+    passingTime: { English: 'Passing', Nederlands: 'Lopend' },
+    speed: { English: 'Speed', Nederlands: 'Snelheid' },
     settingsFolderName: { English: 'Settings', Nederlands: 'Instellingen' },
+    vectorDirections: { English: 'Vector directions', Nederlands: 'Vector richtingen' },
+    sunIntensity: { English: 'Sun intensity', Nederlands: 'Zon intensiteit' },
+    language: { English: 'Language', Nederlands: 'Taal' },
+    closeControls: { English: 'Close Controls', Nederlands: 'Sluit Controles' },
+    openControls: { English: 'Open Controls', Nederlands: 'Open Controles' },
 };
 
 let gui;
+let closeGuiButton;
 let panelFolder;
 let locationFolder;
 let timeFolder;
@@ -401,10 +417,10 @@ function getLocation() {
 }
 
 function createLocationControls() {
-    locationFolder.add({ reset: getLocation }, 'reset').name('Reset to current location');
+    locationFolder.add({ reset: getLocation }, 'reset').name(text.resetLocation[info.lang]);
     locationFolder
         .add(info, 'latitude', -90, 90, 1)
-        .name('Latitude')
+        .name(text.latitude[info.lang])
         .onChange((value) => {
             info.latitude = value;
             updateSunPosition(sunLight, sunMesh, info.latitude, info.longitude, info.date, info.sunIntensity);
@@ -412,7 +428,7 @@ function createLocationControls() {
         });
     locationFolder
         .add(info, 'longitude', -180, 180, 1)
-        .name('Longitude')
+        .name(text.longitude[info.lang])
         .onChange((value) => {
             info.longitude = value;
             updateSunPosition(sunLight, sunMesh, info.latitude, info.longitude, info.date, info.sunIntensity);
@@ -432,11 +448,11 @@ function createTimeControls() {
             },
             'reset'
         )
-        .name('Reset to current date');
+        .name(text.resetTime[info.lang]);
 
     timeFolder
         .add(info, 'year')
-        .name('Year')
+        .name(text.year[info.lang])
         .onChange((value) => {
             info.date.setFullYear(value);
             updateTime();
@@ -444,7 +460,7 @@ function createTimeControls() {
 
     timeFolder
         .add(info, 'guiMonth', 1, 12, 1)
-        .name('Month')
+        .name(text.month[info.lang])
         .onChange((value) => {
             info.date.setMonth(value - 1); // months range: 0-11
             updateTime();
@@ -452,7 +468,7 @@ function createTimeControls() {
 
     dayController = timeFolder
         .add(info, 'day', 1, info.maxDay, 1)
-        .name('Day')
+        .name(text.day[info.lang])
         .onChange((value) => {
             info.date.setDate(value);
             updateTime();
@@ -460,7 +476,7 @@ function createTimeControls() {
 
     timeFolder
         .add(info, 'hour', 0, 23, 1)
-        .name('Hour')
+        .name(text.hour[info.lang])
         .onChange((value) => {
             info.date.setHours(value);
             updateTime();
@@ -468,7 +484,7 @@ function createTimeControls() {
 
     timeFolder
         .add(info, 'minute', 0, 59, 1)
-        .name('Minute')
+        .name(text.minute[info.lang])
         .onChange((value) => {
             info.date.setMinutes(value);
             updateTime();
@@ -476,7 +492,7 @@ function createTimeControls() {
 
     timeFolder
         .add(info, 'passTime')
-        .name('Passing')
+        .name(text.passingTime[info.lang])
         .onChange((value) => {
             info.passTime = value;
             togglePassTime();
@@ -484,7 +500,7 @@ function createTimeControls() {
 
     timeFolder
         .add(info, 'timeSpeed', 1, 100, 1)
-        .name('Speed')
+        .name(text.speed[info.lang])
         .onChange(function (value) {
             info.timeSpeed = value;
             togglePassTime();
@@ -555,7 +571,7 @@ function alignPanel() {
 function toggleArrowHelpers() {
     settingsFolder
         .add(info, 'showArrowHelpers')
-        .name('Vector directions')
+        .name(text.vectorDirections[info.lang])
         .onChange((value) => {
             info.showArrowHelpers = value;
             if (sunLightDirectionHelper) {
@@ -665,7 +681,7 @@ function calculateEnergyProduction() {
 function controlSunIntensity() {
     settingsFolder
         .add(info, 'sunIntensity', 0.1, 1, 0.01)
-        .name('Sun Intensity')
+        .name(text.sunIntensity[info.lang])
         .onChange((value) => {
             info.sunIntensity = value;
             updateSunPosition(sunLight, sunMesh, info.latitude, info.longitude, info.date, info.sunIntensity);
@@ -705,6 +721,8 @@ function addLanguageControl() {
             if (!isSettingsFolderClosed) {
                 settingsFolder.open();
             }
+
+            translateCloseButton();
         });
 }
 
@@ -722,6 +740,19 @@ function addGui() {
     createTimeControls();
     displayPanelStats();
     addSettings();
+    closeGuiButton = document.querySelector('.close-button');
+    closeGuiButton.addEventListener('click', translateCloseButton);
+}
+
+function translateCloseButton() {
+    const ul = closeGuiButton.parentElement.querySelector('ul');
+    const isClosed = ul.classList.contains('closed');
+
+    if (isClosed) {
+        closeGuiButton.innerHTML = text.openControls[info.lang];
+    } else {
+        closeGuiButton.innerHTML = text.closeControls[info.lang];
+    }
 }
 
 function init() {
@@ -740,6 +771,10 @@ function init() {
 
     renderer.setAnimationLoop(animate);
     document.body.appendChild(renderer.domElement);
+
+    window.addEventListener('DOMContentLoaded', () => {
+        translateCloseButton();
+    });
 
     window.addEventListener('resize', onWindowResize, false);
 }
