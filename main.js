@@ -419,7 +419,7 @@ function getLocation() {
 function createLocationControls() {
     locationFolder.add({ reset: getLocation }, 'reset').name(text.resetLocation[info.lang]);
     locationFolder
-        .add(info, 'latitude', -90, 90, 1)
+        .add(info, 'latitude', -90, 90, 0.1)
         .name(text.latitude[info.lang])
         .onChange((value) => {
             info.latitude = value;
@@ -427,7 +427,7 @@ function createLocationControls() {
             calculateEnergyProduction();
         });
     locationFolder
-        .add(info, 'longitude', -180, 180, 1)
+        .add(info, 'longitude', -180, 180, 0.1)
         .name(text.longitude[info.lang])
         .onChange((value) => {
             info.longitude = value;
