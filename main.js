@@ -91,12 +91,29 @@ const gltfLoader = new GLTFLoader();
 const fontLoader = new FontLoader();
 const textureLoader = new THREE.TextureLoader();
 
-const gui = new CustomGUI();
-const panelFolder = gui.addFolder('Solar Panel');
-panelFolder.open();
-const locationFolder = gui.addFolder('Location');
-const timeFolder = gui.addFolder('Time');
-const settingsFolder = gui.addFolder('Settings');
+const text = {
+    language: { English: 'Language', Nederlands: 'Taal' },
+    panelFolderName: { English: 'Solar Panel', Nederlands: 'Zonnepaneel' },
+    automatic: { English: 'Automatic', Nederlands: 'Automatisch' },
+    tiltAngle: { English: 'Tilt Angle', Nederlands: 'Kantelhoek' },
+    azimuthAngle: { English: 'Azimuth Angle', Nederlands: 'Azimuthoek' },
+    solarPanels: { English: 'Solar Panels', Nederlands: 'Zonnepanelen' },
+    panelWattPeak: { English: 'Panel Watt Peak (Wp)', Nederlands: 'Paneel Watt Piek (Wp)' },
+    maxPossibleWatt: { English: 'Max Possible Watt', Nederlands: 'Max Watt Mogelijk' },
+    incidentAngle: { English: 'Incident Angle', Nederlands: 'Invalshoek' },
+    alignment: { English: 'Alignment', Nederlands: 'Uitlijning' },
+    totalKWH: { English: 'Total kWh', Nederlands: 'Totaal kWh' },
+    resetTotalKWH: { English: 'Reset total kWh', Nederlands: 'Reset totaal kWh' },
+    locationFolderName: { English: 'Location', Nederlands: 'Locatie' },
+    timeFolderName: { English: 'Time', Nederlands: 'Tijd' },
+    settingsFolderName: { English: 'Settings', Nederlands: 'Instellingen' },
+};
+
+let gui;
+let panelFolder;
+let locationFolder;
+let timeFolder;
+let settingsFolder;
 
 let sunLight;
 let sunMesh;
@@ -128,6 +145,7 @@ let info = {
     sunIntensity: 1,
     currentMaxWatt: 0,
     alignPanel: false,
+    lang: 'English',
 };
 
 function animate() {
@@ -284,7 +302,9 @@ function addRoofSolarPanel() {
     panelCylinder.receiveShadow = true;
 
     scene.add(panelCylinder);
+}
 
+function addPanelControls() {
     function toggleTiltAndAzimuthControllers() {
         [tiltAngleController, azimuthAngleController].forEach((controller) => {
             const input = controller.domElement.querySelector('input');
@@ -306,7 +326,7 @@ function addRoofSolarPanel() {
 
     panelFolder
         .add(info, 'alignPanel')
-        .name('Automatic')
+        .name(text.automatic[info.lang])
         .onChange((value) => {
             info.alignPanel = value;
             toggleTiltAndAzimuthControllers();
@@ -315,7 +335,7 @@ function addRoofSolarPanel() {
 
     tiltAngleController = panelFolder
         .add(info, 'tilt', 0, 90, 1)
-        .name('Tilt Angle')
+        .name(text.tiltAngle[info.lang])
         .onChange((value) => {
             info.tilt = value;
             panelCube.rotation.x = -Math.PI / 2 - THREE.MathUtils.degToRad(value);
@@ -324,7 +344,7 @@ function addRoofSolarPanel() {
 
     azimuthAngleController = panelFolder
         .add(info, 'azimuth', 0, 360, 1)
-        .name('Azimuth Angle')
+        .name(text.azimuthAngle[info.lang])
         .onChange((value) => {
             info.azimuth = value;
             panelCylinder.rotation.y = -THREE.MathUtils.degToRad(value);
@@ -333,7 +353,7 @@ function addRoofSolarPanel() {
 
     panelFolder
         .add(info, 'solarPanels', 1, 100, 1)
-        .name('Solar Panels')
+        .name(text.solarPanels[info.lang])
         .onChange((value) => {
             info.solarPanels = value;
             info.totalWattPeak = info.wattPeak * info.solarPanels;
@@ -342,7 +362,7 @@ function addRoofSolarPanel() {
 
     panelFolder
         .add(info, 'wattPeak', 1, 1000, 1)
-        .name('Panel Watt Peak (Wp)')
+        .name(text.panelWattPeak[info.lang])
         .onChange((value) => {
             info.wattPeak = value;
             info.totalWattPeak = info.wattPeak * info.solarPanels;
@@ -351,7 +371,7 @@ function addRoofSolarPanel() {
 
     const disabled = [];
     // disabled.push(panelFolder.add(info, 'totalWattPeak').name('Total Watt Peak').listen());
-    disabled.push(panelFolder.add(info, 'currentMaxWatt').step(0.01).name('Max Possible Watt').listen());
+    disabled.push(panelFolder.add(info, 'currentMaxWatt').step(0.01).name(text.maxPossibleWatt[info.lang]).listen());
 
     disabled.forEach((controller) => {
         const input = controller.domElement.querySelector('input');
@@ -549,10 +569,10 @@ function toggleArrowHelpers() {
 
 function displayPanelStats() {
     let controllers = [];
-    controllers.push(panelFolder.add(info, 'incidentAngle').step(0.01).name('Incident Angle').listen());
-    controllers.push(panelFolder.add(info, 'angleAlignment').step(0.01).name('Alignment').listen());
+    controllers.push(panelFolder.add(info, 'incidentAngle').step(0.01).name(text.incidentAngle[info.lang]).listen());
+    controllers.push(panelFolder.add(info, 'angleAlignment').step(0.01).name(text.alignment[info.lang]).listen());
     controllers.push(panelFolder.add(info, 'currentWattMinute').step(0.01).name('Watt').listen());
-    controllers.push(panelFolder.add(info, 'totalKWH').step(0.0001).name('Total kWh').listen());
+    controllers.push(panelFolder.add(info, 'totalKWH').step(0.0001).name(text.totalKWH[info.lang]).listen());
 
     panelFolder
         .add(
@@ -563,12 +583,12 @@ function displayPanelStats() {
             },
             'reset'
         )
-        .name('Reset total kWh');
+        .name(text.resetTotalKWH[info.lang]);
 
     const labels = panelFolder.domElement.getElementsByTagName('span');
     for (let label of labels) {
-        if (label.innerHTML === 'Incident Angle' || label.innerHTML === 'Alignment' || label.innerHTML === 'Watt' || label.innerHTML === 'Total kWh') {
-            if (label.innerHTML === 'Watt' || label.innerHTML === 'Total kWh') {
+        if (label.innerHTML === text.incidentAngle[info.lang] || label.innerHTML === text.alignment[info.lang] || label.innerHTML === 'Watt' || label.innerHTML === text.totalKWH[info.lang]) {
+            if (label.innerHTML === 'Watt' || label.innerHTML === text.totalKWH[info.lang]) {
                 label.style.color = 'yellow';
                 label.style.fontSize = '15px';
                 label.style.fontWeight = 'bold';
@@ -653,6 +673,57 @@ function controlSunIntensity() {
         });
 }
 
+function createFolders() {
+    panelFolder = gui.addFolder(text.panelFolderName[info.lang]);
+    locationFolder = gui.addFolder(text.locationFolderName[info.lang]);
+    timeFolder = gui.addFolder(text.timeFolderName[info.lang]);
+    settingsFolder = gui.addFolder(text.settingsFolderName[info.lang]);
+}
+
+function addLanguageControl() {
+    settingsFolder
+        .add(info, 'lang', ['English', 'Nederlands'])
+        .name(text.language[info.lang])
+        .onChange((value) => {
+            info.lang = value;
+            let isPanelFolderClosed = panelFolder.closed;
+            let isLocationFolderClosed = locationFolder.closed;
+            let isTimeFolderClosed = timeFolder.closed;
+            let isSettingsFolderClosed = settingsFolder.closed;
+            gui.destroy();
+            addGui();
+
+            if (!isPanelFolderClosed) {
+                panelFolder.open();
+            }
+            if (!isLocationFolderClosed) {
+                locationFolder.open();
+            }
+            if (!isTimeFolderClosed) {
+                timeFolder.open();
+            }
+            if (!isSettingsFolderClosed) {
+                settingsFolder.open();
+            }
+        });
+}
+
+function addSettings() {
+    toggleArrowHelpers();
+    controlSunIntensity();
+    addLanguageControl();
+}
+
+function addGui() {
+    gui = new CustomGUI();
+    createFolders();
+    addPanelControls();
+    createLocationControls();
+    createTimeControls();
+    displayPanelStats();
+    addSettings();
+}
+
 function init() {
     renderer.setSize(window.innerWidth, window.innerHeight);
 
@@ -662,12 +733,10 @@ function init() {
     loadNavigation();
     loadHouse();
     addRoofSolarPanel();
-    createLocationControls();
-    createTimeControls();
     calculateEnergyProduction();
-    toggleArrowHelpers();
-    displayPanelStats();
-    controlSunIntensity();
+
+    addGui();
+    panelFolder.open();
 
     renderer.setAnimationLoop(animate);
     document.body.appendChild(renderer.domElement);
