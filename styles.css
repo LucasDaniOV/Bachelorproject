@@ -66,6 +66,7 @@
     align-items: center;
     padding: 20px;
     gap: 20px;
+    height: 64px;
 }
 
 #kwh,
@@ -80,4 +81,18 @@
 
 #turns {
     color: #ff0000;
+}
+
+.statsPerDay {
+    position: absolute;
+    padding: 20px;
+    background-color: #000;
+    color: #fff;
+    left: 15px;
+    opacity: 0.9;
+}
+
+.dayProduction {
+    font-size: 20px;
+    font-weight: 600;
 }

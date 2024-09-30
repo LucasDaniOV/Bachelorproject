@@ -135,6 +135,7 @@ const button = document.querySelector('#startButton');
 const buttonText = document.querySelector('#buttonText');
 const kwh = document.querySelector('#kwh');
 const turns = document.querySelector('#turns');
+const statsPerDay = document.querySelector('.statsPerDay');
 
 const startTurns = 5;
 
@@ -596,7 +597,11 @@ function updateTime() {
 
 function passMinute() {
     info.totalKWH += info.currentWattMinute / 60 / 1000;
-    kwh.innerHTML = info.totalKWH.toFixed(4);
+    // kwh.innerHTML = info.totalKWH.toFixed(4);
+
+    const dayProduction = document.querySelector(`#day${startTurns - availableTurns}`);
+    dayProduction.innerHTML = (parseFloat(dayProduction.textContent ? dayProduction.textContent : 0) + info.currentWattMinute / 60 / 1000).toFixed(4) + ' kWh';
+
     info.date = new Date(info.date.setMinutes(info.date.getMinutes() + 1));
     updateTime();
 }
@@ -627,7 +632,7 @@ function doTurn() {
     gui.domElement.style.pointerEvents = 'none';
 
     availableTurns--;
-    turns.innerHTML = availableTurns;
+    // turns.innerHTML = availableTurns;
 
     const totalTime = 60 * 24;
 
@@ -642,9 +647,9 @@ function doTurn() {
 
     turnPromise.then(() => {
         if (availableTurns == 0) {
-            buttonText.innerHTML = 'Game finished &#127881;';
+            buttonText.innerHTML = '&#127881;';
         } else {
-            buttonText.innerHTML = 'Next turn';
+            buttonText.innerHTML = `Start dag ${startTurns + 1 - availableTurns}`;
             startButton.classList.remove('colorShiftWaiting');
             startButton.classList.add('colorShift');
             button.addEventListener('click', handleButtonClick);
@@ -726,6 +731,23 @@ function translateCloseButton() {
         closeGuiButton.innerHTML = text.closeControls[info.lang];
     }
 }
+
+function createStatsPerDay() {
+    for (let i = 1; i <= startTurns; i++) {
+        info[`day${i}`] = 0;
+        const div = document.createElement('div');
+        const span = document.createElement('span');
+        const span2 = document.createElement('span');
+        span2.id = `day${i}`;
+        span2.className = 'dayProduction';
+        span.innerHTML = `Dag ${i}: `;
+        span.appendChild(span2);
+        div.appendChild(span);
+        statsPerDay.appendChild(div);
+    }
+}
+
+createStatsPerDay();
 
 function init() {
     renderer.setSize(window.innerWidth, window.innerHeight);
