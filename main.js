@@ -630,6 +630,7 @@ function doTurn() {
 
     gui.close();
     gui.domElement.style.pointerEvents = 'none';
+    translateCloseButton();
 
     availableTurns--;
     // turns.innerHTML = availableTurns;
@@ -656,6 +657,8 @@ function doTurn() {
         }
         gui.open();
         gui.domElement.style.pointerEvents = 'auto';
+        translateCloseButton();
+
         // openAllControls();
     });
 }
