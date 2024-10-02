@@ -765,6 +765,14 @@ function translateCloseButton() {
     }
 }
 
+function initLang() {
+    if (!navigator) return;
+    const userLanguage = navigator.language || navigator.userLanguage;
+    if (userLanguage === 'nl') {
+        info.lang = 'Nederlands';
+    }
+}
+
 async function init() {
     renderer.setSize(window.innerWidth, window.innerHeight);
 
@@ -777,15 +785,13 @@ async function init() {
     addRoofSolarPanel();
     calculateEnergyProduction();
 
+    initLang();
     addGui();
+    translateCloseButton();
     panelFolder.open();
 
     renderer.setAnimationLoop(animate);
     document.body.appendChild(renderer.domElement);
-
-    window.addEventListener('DOMContentLoaded', () => {
-        translateCloseButton();
-    });
 
     window.addEventListener('resize', onWindowResize, false);
 }
