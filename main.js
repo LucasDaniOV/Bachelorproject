@@ -404,20 +404,30 @@ function createSun() {
     scene.add(sunMesh);
 }
 
-function getLocation() {
-    if (navigator.geolocation) {
-        navigator.geolocation.getCurrentPosition((position) => {
-            info.latitude = position.coords.latitude;
-            info.longitude = position.coords.longitude;
-            gui.updateDisplay();
-            updateSunPosition(sunLight, sunMesh, info.latitude, info.longitude, info.date, info.sunIntensity);
-            calculateEnergyProduction();
+async function getLocation() {
+    if (!navigator.geolocation) {
+        return;
+    }
+    try {
+        const position = await new Promise((resolve, reject) => {
+            navigator.geolocation.getCurrentPosition(resolve, reject);
         });
+        info.latitude = position.coords.latitude;
+        info.longitude = position.coords.longitude;
+    } catch (error) {
+        console.error(error);
     }
 }
 
+async function resetLocation() {
+    await getLocation();
+    gui.updateDisplay();
+    updateSunPosition(sunLight, sunMesh, info.latitude, info.longitude, info.date, info.sunIntensity);
+    calculateEnergyProduction();
+}
+
 function createLocationControls() {
-    locationFolder.add({ reset: getLocation }, 'reset').name(text.resetLocation[info.lang]);
+    locationFolder.add({ reset: resetLocation }, 'reset').name(text.resetLocation[info.lang]);
     locationFolder
         .add(info, 'latitude', -90, 90, 0.1)
         .name(text.latitude[info.lang])
@@ -755,11 +765,12 @@ function translateCloseButton() {
     }
 }
 
-function init() {
+async function init() {
     renderer.setSize(window.innerWidth, window.innerHeight);
 
-    getLocation();
+    await getLocation();
     createSun();
+    updateSunPosition(sunLight, sunMesh, info.latitude, info.longitude, info.date, info.sunIntensity);
     loadGrassland();
     loadNavigation();
     loadHouse();
