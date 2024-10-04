@@ -5,6 +5,10 @@
     font-family: sans-serif;
 }
 
+body {
+    background-color: skyblue;
+}
+
 .dg {
     width: auto !important;
 }
