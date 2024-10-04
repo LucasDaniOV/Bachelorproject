@@ -122,6 +122,7 @@ const text = {
     language: { English: 'Language', Nederlands: 'Taal' },
     closeControls: { English: 'Close Controls', Nederlands: 'Sluit Controles' },
     openControls: { English: 'Open Controls', Nederlands: 'Open Controles' },
+    passFullDay: { English: 'Pass full day', Nederlands: 'Hele dag voorbijgaan' },
 };
 
 let gui;
@@ -515,6 +516,23 @@ function createTimeControls() {
             info.timeSpeed = value;
             togglePassTime();
         });
+
+    timeFolder
+        .add(
+            {
+                passFullDay: () => {
+                    const totalTime = 60 * 24;
+                    for (let i = 0; i < totalTime; i++) {
+                        setTimeout(() => {
+                            passMinute();
+                            if (i === totalTime - 1) resolve();
+                        }, i * 1);
+                    }
+                },
+            },
+            'passFullDay'
+        )
+        .name(text.passFullDay[info.lang]);
 }
 
 function calculateSolarPanelAlignment() {
