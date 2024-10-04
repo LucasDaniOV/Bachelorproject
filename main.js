@@ -428,7 +428,16 @@ async function resetLocation() {
 }
 
 function createLocationControls() {
-    locationFolder.add({ reset: resetLocation }, 'reset').name(text.resetLocation[info.lang]);
+    locationFolder
+        .add(
+            {
+                reset: async () => {
+                    await resetLocation();
+                },
+            },
+            'reset'
+        )
+        .name(text.resetLocation[info.lang]);
     locationFolder
         .add(info, 'latitude', -90, 90, 0.1)
         .name(text.latitude[info.lang])
@@ -794,7 +803,6 @@ function initLang() {
 async function init() {
     renderer.setSize(window.innerWidth, window.innerHeight);
 
-    await getLocation();
     createSun();
     updateSunPosition(sunLight, sunMesh, info.latitude, info.longitude, info.date, info.sunIntensity);
     loadGrassland();
