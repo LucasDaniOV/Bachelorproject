@@ -147,13 +147,13 @@ let info = {
     longitude: 5,
     tilt: 0,
     azimuth: 0,
-    showArrowHelpers: false,
+    showArrowHelpers: true,
     incidentAngle: 0,
     angleAlignment: 0,
     passTime: false,
     timeSpeed: 1,
     timeIntervalID: null,
-    date: new Date(),
+    date: new Date('2024-10-10T08:30:00'),
     solarPanels: 5,
     wattPeak: 500,
     totalWattPeak: 2500,
@@ -815,6 +815,9 @@ async function init() {
     addGui();
     translateCloseButton();
     panelFolder.open();
+    locationFolder.open();
+    timeFolder.open();
+    settingsFolder.open();
 
     renderer.setAnimationLoop(animate);
     document.body.appendChild(renderer.domElement);
